@@ -71,7 +71,7 @@ export function normalizeStudent(data: any): StudentProfile {
 
 export const api = {
   // --- Profile & Stats ---
-  async getProfile(): Promise<{ success: boolean; data?: StudentProfile; message?: string }> {
+  async getProfile(): Promise<{ success: boolean; data?: StudentProfile; message?: string; status?: number }> {
     if (USE_MOCK_DATA) {
       const db = getMockDB();
       return { success: true, data: db.student };
@@ -79,8 +79,12 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE_URL}/student/user/me`, { headers: getHeaders() });
       const data = await res.json();
+      if (!res.ok) {
+        // Pass the HTTP status code back so auth context can differentiate 401 vs other errors
+        return { success: false, message: data.message || `HTTP ${res.status}`, status: res.status };
+      }
       const normalized = normalizeStudent(data.result || data.data || data.student);
-      return { success: res.ok && !data.error, data: normalized, message: data.message };
+      return { success: !data.error, data: normalized, message: data.message, status: res.status };
     } catch (err: any) {
       return { success: false, message: err.message || "Failed to fetch profile" };
     }

@@ -40,7 +40,7 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Check cache first
+      // Check cache first — render immediately from cache
       const cachedProfile = localStorage.getItem("studentProfile");
       if (cachedProfile && cachedProfile !== "undefined" && cachedProfile !== "null") {
         try {
@@ -55,20 +55,26 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Background check
+      // Background refresh — only log out on explicit 401 (token invalid/expired)
       if (!USE_MOCK_DATA) {
-        const res = await api.getProfile();
-        if (res.success && res.data) {
-          setStudent(res.data);
-          localStorage.setItem("studentProfile", JSON.stringify(res.data));
-        } else {
-          // Token expired or invalid
-          logout();
+        try {
+          const res = await api.getProfile();
+          if (res.success && res.data) {
+            setStudent(res.data);
+            localStorage.setItem("studentProfile", JSON.stringify(res.data));
+          } else if (res.status === 401) {
+            // Only logout on true 401 Unauthorized — token expired or invalid
+            logout();
+          }
+          // On other failures (500, network, etc.) — keep the cached session alive
+        } catch (profileErr) {
+          // Network error — keep the cached session, do NOT logout
+          console.warn("Profile refresh failed (network?), keeping cached session:", profileErr);
         }
       }
     } catch (err) {
       console.error("Student auth status check failed:", err);
-      logout();
+      // Don't auto-logout on unexpected errors — let user stay logged in
     } finally {
       setLoading(false);
     }
@@ -153,9 +159,25 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
       setError(null);
 
       if (!USE_MOCK_DATA) {
+        // Generate a stable browser fingerprint based on device characteristics.
+        // Falls back to a persisted random ID so it survives page refreshes.
         let deviceFingerprint = typeof window !== "undefined" ? localStorage.getItem("studentDeviceFingerprint") : null;
         if (!deviceFingerprint) {
-          deviceFingerprint = `web-${Math.random().toString(36).substring(2, 15)}`;
+          // Build a deterministic fingerprint from browser/device traits
+          const traits = [
+            navigator.userAgent,
+            navigator.language,
+            screen.width,
+            screen.height,
+            screen.colorDepth,
+            Intl.DateTimeFormat().resolvedOptions().timeZone,
+          ].join("|");
+          // Simple hash
+          let hash = 0;
+          for (let i = 0; i < traits.length; i++) {
+            hash = (Math.imul(31, hash) + traits.charCodeAt(i)) | 0;
+          }
+          deviceFingerprint = `web-${Math.abs(hash).toString(36)}-${Date.now().toString(36)}`;
           if (typeof window !== "undefined") {
             localStorage.setItem("studentDeviceFingerprint", deviceFingerprint);
           }
