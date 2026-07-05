@@ -1,0 +1,368 @@
+"use client";
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { USE_MOCK_DATA, API_BASE_URL } from "@/config/app-config";
+import { StudentProfile, initialMockDatabase } from "@/data/mockData";
+import { api, normalizeStudent } from "@/services/api";
+
+interface StudentAuthContextType {
+  student: StudentProfile | null;
+  loading: boolean;
+  error: string | null;
+  isAuthenticated: boolean;
+  loginWithPhone: (phoneNumber: string) => Promise<{ success: boolean; otp?: string; message?: string }>;
+  verifyOtp: (otp: string) => Promise<{ success: boolean; message?: string }>;
+  registerWithPhone: (fullName: string, phoneNumber: string, email?: string, acceptTerms?: boolean) => Promise<{ success: boolean; otp?: string; message?: string }>;
+  logout: () => void;
+  updateProfile: (profileData: Partial<StudentProfile>) => Promise<{ success: boolean }>;
+}
+
+const StudentAuthContext = createContext<StudentAuthContextType | undefined>(undefined);
+
+export function StudentAuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const [student, setStudent] = useState<StudentProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Verification temporary states
+  const [pendingPhone, setPendingPhone] = useState<string>("");
+  const [pendingRegData, setPendingRegData] = useState<{ fullName: string; email?: string } | null>(null);
+  const [generatedOtp, setGeneratedOtp] = useState<string>("");
+
+  const checkAuthStatus = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("studentToken");
+      if (!token) {
+        setStudent(null);
+        return;
+      }
+
+      // Check cache first
+      const cachedProfile = localStorage.getItem("studentProfile");
+      if (cachedProfile && cachedProfile !== "undefined" && cachedProfile !== "null") {
+        try {
+          setStudent(JSON.parse(cachedProfile));
+        } catch (e) {
+          setStudent(null);
+        }
+      } else {
+        if (USE_MOCK_DATA) {
+          setStudent(initialMockDatabase.student);
+          localStorage.setItem("studentProfile", JSON.stringify(initialMockDatabase.student));
+        }
+      }
+
+      // Background check
+      if (!USE_MOCK_DATA) {
+        const res = await api.getProfile();
+        if (res.success && res.data) {
+          setStudent(res.data);
+          localStorage.setItem("studentProfile", JSON.stringify(res.data));
+        } else {
+          // Token expired or invalid
+          logout();
+        }
+      }
+    } catch (err) {
+      console.error("Student auth status check failed:", err);
+      logout();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithPhone = async (phoneNumber: string): Promise<{ success: boolean; otp?: string; message?: string }> => {
+    try {
+      setLoading(true);
+      setError(null);
+      const cleanPhone = phoneNumber.replace(/\D/g, "").slice(-10);
+
+      if (!USE_MOCK_DATA) {
+        const response = await fetch(`${API_BASE_URL}/student/auth/send-phone-otp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone_number: cleanPhone }),
+        });
+        const data = await response.json();
+        if (!response.ok || data.error === true) {
+          return { success: false, message: data.message || "Failed to send OTP" };
+        }
+        setPendingPhone(cleanPhone);
+        setPendingRegData(null);
+        return { success: true };
+      }
+
+      // Mock pathway
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const otp = "123456";
+      setGeneratedOtp(otp);
+      setPendingPhone(cleanPhone);
+      setPendingRegData(null);
+      return { success: true, otp };
+    } catch (err: any) {
+      return { success: false, message: err.message || "Failed to send OTP" };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const registerWithPhone = async (fullName: string, phoneNumber: string, email?: string, acceptTerms?: boolean): Promise<{ success: boolean; otp?: string; message?: string }> => {
+    try {
+      setLoading(true);
+      setError(null);
+      if (!acceptTerms) {
+        return { success: false, message: "You must accept the Terms and Conditions" };
+      }
+      const cleanPhone = phoneNumber.replace(/\D/g, "").slice(-10);
+
+      if (!USE_MOCK_DATA) {
+        const response = await fetch(`${API_BASE_URL}/student/auth/send-phone-otp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone_number: cleanPhone, purpose: "register", full_name: fullName, email }),
+        });
+        const data = await response.json();
+        if (!response.ok || data.error === true) {
+          return { success: false, message: data.message || "Failed to send OTP" };
+        }
+        setPendingPhone(cleanPhone);
+        setPendingRegData({ fullName, email });
+        return { success: true };
+      }
+
+      // Mock pathway
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const otp = "123456";
+      setGeneratedOtp(otp);
+      setPendingPhone(cleanPhone);
+      setPendingRegData({ fullName, email });
+      return { success: true, otp };
+    } catch (err: any) {
+      return { success: false, message: err.message || "Failed to register" };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOtp = async (otp: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!USE_MOCK_DATA) {
+        let deviceFingerprint = typeof window !== "undefined" ? localStorage.getItem("studentDeviceFingerprint") : null;
+        if (!deviceFingerprint) {
+          deviceFingerprint = `web-${Math.random().toString(36).substring(2, 15)}`;
+          if (typeof window !== "undefined") {
+            localStorage.setItem("studentDeviceFingerprint", deviceFingerprint);
+          }
+        }
+
+        const response = await fetch(`${API_BASE_URL}/student/auth/verify-phone-otp`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "x-device-fingerprint": deviceFingerprint
+          },
+          body: JSON.stringify({
+            phone_number: pendingPhone,
+            otp_code: otp,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok || data.error === true) {
+          return { success: false, message: data.message || "Verification failed" };
+        }
+
+        let resultData = data.result || {};
+        // If it's a new user, complete registration
+        if (resultData.isNewUser && pendingRegData) {
+          const regRes = await fetch(`${API_BASE_URL}/student/auth/complete-registration`, {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "x-device-fingerprint": deviceFingerprint
+            },
+            body: JSON.stringify({
+              phone_number: pendingPhone,
+              full_name: pendingRegData.fullName,
+              email: pendingRegData.email,
+              stream: "SEE",
+            }),
+          });
+          const regData = await regRes.json();
+          if (!regRes.ok || regData.error === true) {
+            return { success: false, message: regData.message || "Registration completion failed" };
+          }
+          resultData = regData.result || {};
+        }
+
+        const token = resultData.accessToken || resultData.token;
+        const rawUser = resultData.user || resultData.student;
+        const normalized = normalizeStudent(rawUser);
+
+        if (!token) {
+          return { success: false, message: "Token not returned from server" };
+        }
+
+        localStorage.setItem("studentToken", token);
+        localStorage.setItem("studentPhone", pendingPhone);
+        localStorage.setItem("studentProfile", JSON.stringify(normalized));
+        setStudent(normalized);
+        return { success: true };
+      }
+
+      // Mock verify
+      await new Promise(resolve => setTimeout(resolve, 800));
+      if (otp !== generatedOtp && otp !== "123456") {
+        return { success: false, message: "Invalid OTP code. Enter 123456 for demo." };
+      }
+
+      localStorage.setItem("studentToken", "mock-student-jwt-token-12345");
+      localStorage.setItem("studentPhone", pendingPhone);
+
+      if (pendingRegData) {
+        const newStudent: StudentProfile = {
+          id: `s-${Date.now()}`,
+          fullName: pendingRegData.fullName,
+          email: pendingRegData.email || "",
+          phoneNumber: pendingPhone,
+          avatarEmoji: "🎓",
+          rollNo: Math.floor(Math.random() * 40) + 1,
+          grade: "Grade 10 (Section A)",
+          schoolName: "NoteSwift Academy",
+          stream: "SEE",
+          gpa: 3.5,
+          attendancePercent: 100,
+          weeklyStudyHours: 0,
+          streakCount: 1,
+        };
+        localStorage.setItem("studentProfile", JSON.stringify(newStudent));
+        setStudent(newStudent);
+      } else {
+        const isDemo = pendingPhone === "9841234567";
+        if (isDemo) {
+          localStorage.setItem("studentProfile", JSON.stringify(initialMockDatabase.student));
+          setStudent(initialMockDatabase.student);
+        } else {
+          const guestStudent: StudentProfile = {
+            id: `s-${Date.now()}`,
+            fullName: "Guest Student",
+            email: "",
+            phoneNumber: pendingPhone,
+            avatarEmoji: "🎒",
+            rollNo: 24,
+            grade: "Grade 10 (Section B)",
+            schoolName: "NoteSwift Academy",
+            stream: "SEE",
+            gpa: 3.2,
+            attendancePercent: 90,
+            weeklyStudyHours: 4.5,
+            streakCount: 1,
+          };
+          localStorage.setItem("studentProfile", JSON.stringify(guestStudent));
+          setStudent(guestStudent);
+        }
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, message: err.message || "Verification failed" };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("studentToken");
+    localStorage.removeItem("studentPhone");
+    localStorage.removeItem("studentProfile");
+    localStorage.removeItem("noteswift_student_mock_db"); // Clear mock database too on complete logout for reset
+    setStudent(null);
+    setError(null);
+    router.push("/login");
+  };
+
+  const updateProfile = async (profileData: Partial<StudentProfile>): Promise<{ success: boolean }> => {
+    const res = await api.updateProfile(profileData);
+    if (res.success && res.data) {
+      setStudent(res.data);
+      localStorage.setItem("studentProfile", JSON.stringify(res.data));
+      return { success: true };
+    }
+    return { success: false };
+  };
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  // Synchronize streak count matching mobile app algorithm and keys
+  useEffect(() => {
+    if (!student || !student.id) return;
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const lastAppOpenStr = localStorage.getItem("profile_last_app_open_date");
+      const streakStr = localStorage.getItem("profile_login_streak");
+      let lastAppOpen = lastAppOpenStr ? new Date(lastAppOpenStr) : null;
+      if (lastAppOpen) lastAppOpen.setHours(0, 0, 0, 0);
+      let streak = streakStr ? parseInt(streakStr, 10) : 0;
+
+      if (!lastAppOpen) {
+        streak = 1;
+      } else {
+        const diffDays = Math.floor((today.getTime() - lastAppOpen.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) {
+          // unchanged
+        } else if (diffDays === 1) {
+          streak += 1;
+        } else if (diffDays > 1) {
+          streak = 1;
+        }
+      }
+      if (streak < 1) streak = 1;
+
+      localStorage.setItem("profile_last_app_open_date", today.toISOString());
+      localStorage.setItem("profile_login_streak", streak.toString());
+
+      // If the calculated streak is different from current student.streakCount, update student state
+      if (student.streakCount !== streak) {
+        setStudent(prev => prev ? { ...prev, streakCount: streak } : null);
+      }
+    } catch (e) {
+      console.error("Failed to update streak count:", e);
+    }
+  }, [student?.id]);
+
+  const isAuthenticated = !!student;
+
+  return (
+    <StudentAuthContext.Provider
+      value={{
+        student,
+        loading,
+        error,
+        isAuthenticated,
+        loginWithPhone,
+        verifyOtp,
+        registerWithPhone,
+        logout,
+        updateProfile,
+      }}
+    >
+      {children}
+    </StudentAuthContext.Provider>
+  );
+}
+
+export function useStudentAuth() {
+  const context = useContext(StudentAuthContext);
+  if (context === undefined) {
+    throw new Error("useStudentAuth must be used within a StudentAuthProvider");
+  }
+  return context;
+}
