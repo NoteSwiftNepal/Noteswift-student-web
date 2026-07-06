@@ -46,16 +46,16 @@ export function normalizeStudent(data: any): StudentProfile {
   return {
     id: data._id || data.id || "",
     email: data.email || "",
-    fullName: data.full_name || data.fullName || "Student",
+    fullName: data.full_name || data.fullName || "",
     phoneNumber: data.phone_number || data.phoneNumber || "",
     avatarEmoji: data.avatarEmoji || "🎓",
-    rollNo: data.rollNo || data.roll_no || 1,
-    grade: typeof data.grade === "number" ? `Grade ${data.grade}` : (data.grade || "Grade 10"),
+    rollNo: data.rollNo ?? data.roll_no ?? null,
+    grade: typeof data.grade === "number" ? `Grade ${data.grade}` : (data.grade || ""),
     schoolName: data.address?.institution || data.schoolName || "",
-    stream: data.stream || "SEE",
-    gpa: data.gpa || 4.0,
-    attendancePercent: data.attendancePercent || data.attendance_percent || 100,
-    weeklyStudyHours: data.weeklyStudyHours || data.weekly_study_hours || 0,
+    stream: data.stream || "",
+    gpa: data.gpa ?? null,
+    attendancePercent: data.attendancePercent ?? data.attendance_percent ?? null,
+    weeklyStudyHours: data.weeklyStudyHours ?? data.weekly_study_hours ?? null,
     streakCount: data.streakCount || data.streak_count || 1,
     address: {
       province: data.address?.province || "",
@@ -77,13 +77,13 @@ export const api = {
       return { success: true, data: db.student };
     }
     try {
-      const res = await fetch(`${API_BASE_URL}/student/user/me`, { headers: getHeaders() });
+      const res = await fetch(`${API_BASE_URL}/student/auth/me`, { headers: getHeaders() });
       const data = await res.json();
       if (!res.ok) {
         // Pass the HTTP status code back so auth context can differentiate 401 vs other errors
         return { success: false, message: data.message || `HTTP ${res.status}`, status: res.status };
       }
-      const normalized = normalizeStudent(data.result || data.data || data.student);
+      const normalized = normalizeStudent(data.result?.student || data.result || data.data || data.student);
       return { success: !data.error, data: normalized, message: data.message, status: res.status };
     } catch (err: any) {
       return { success: false, message: err.message || "Failed to fetch profile" };

@@ -56,13 +56,9 @@ function HistoryContent() {
     const loadData = async () => {
       const res = await api.getHistory();
       if (res.success && res.data) {
-        if (res.data.length === 0 && typeof window !== "undefined") {
-          localStorage.setItem("noteswift_student_history", JSON.stringify(initialHistory));
-          setHistory(initialHistory);
-        } else {
-          setHistory(res.data);
-        }
+        setHistory(res.data);
       }
+      // If API returns empty or fails, history stays [] and empty state is shown
     };
     loadData();
   }, []);

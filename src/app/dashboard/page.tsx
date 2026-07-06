@@ -43,7 +43,7 @@ function DashboardContent() {
   const [tests, setTests] = useState<MockTest[]>([]);
   const [doubts, setDoubts] = useState<DoubtQuestion[]>([]);
   const [timetable, setTimetable] = useState<TimetableClass[]>([]);
-  const [stats, setStats] = useState({ attendance: 93.5, studyHours: 18.5, assignmentsDue: 1 });
+  const [stats, setStats] = useState({ attendance: null as number | null, studyHours: null as number | null, assignmentsDue: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -64,10 +64,10 @@ function DashboardContent() {
           setTimetable(d.timetable || d.liveClassesToday || []);
           if (d.stats) {
             setStats({
-              attendance: d.stats.attendance ?? d.stats.overallProgress ?? 93.5,
-              studyHours: d.stats.studyHours ?? d.stats.weeklyStudyHours ?? 0,
-              assignmentsDue: d.stats.assignmentsDue ?? d.stats.testsAvailable ?? 0,
-            });
+            attendance: d.stats.attendance ?? d.stats.overallProgress ?? null,
+            studyHours: d.stats.studyHours ?? d.stats.weeklyStudyHours ?? null,
+            assignmentsDue: d.stats.assignmentsDue ?? d.stats.testsAvailable ?? 0,
+          });
           }
         }
 
@@ -170,7 +170,7 @@ function DashboardContent() {
             Student Overview
           </span>
           <h2 className="text-xl md:text-2xl font-extrabold tracking-tight">
-            Namaste, {student.fullName}!
+            Namaste, {student.fullName || student.phoneNumber || "Student"}!
           </h2>
           <p className="text-blue-100 text-xs md:text-sm max-w-xl font-medium">
             Keep up your <span className="font-extrabold text-white underline decoration-yellow-400 decoration-2 underline-offset-4">{student.streakCount}-day study streak!</span> Consistency beats intensity. Ready for today's classes?
@@ -309,7 +309,7 @@ function DashboardContent() {
           </CardHeader>
           <CardContent className="space-y-1">
             <div className="text-3xl font-extrabold text-gray-900">
-              {student.attendancePercent}%
+              {student.attendancePercent != null ? `${student.attendancePercent}%` : "N/A"}
             </div>
             <p className="text-xs text-gray-500 font-semibold">Class presence rate</p>
           </CardContent>
@@ -325,7 +325,7 @@ function DashboardContent() {
           </CardHeader>
           <CardContent className="space-y-1">
             <div className="text-3xl font-extrabold text-gray-900">
-              {student.weeklyStudyHours} hrs
+              {student.weeklyStudyHours != null ? `${student.weeklyStudyHours} hrs` : "N/A"}
             </div>
             <p className="text-xs text-gray-500 font-semibold">Active this week</p>
           </CardContent>

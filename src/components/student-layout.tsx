@@ -210,9 +210,9 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                   {student.fullName ? student.fullName.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'NS'}
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
-                  <span className="font-extrabold text-xs sm:text-sm truncate text-gray-800">{student.fullName}</span>
+                  <span className="font-extrabold text-xs sm:text-sm truncate text-gray-800">{student.fullName || student.phoneNumber || "Student"}</span>
                   <span className="text-[10px] sm:text-xs text-gray-500 font-bold truncate">
-                    Roll {student.rollNo} • {student.grade.split(" ")[0]}
+                    {student.rollNo != null ? `Roll ${student.rollNo}` : ""}{student.rollNo != null && student.grade ? " • " : ""}{student.grade ? student.grade.split(" ")[0] : ""}
                   </span>
                 </div>
               </div>
