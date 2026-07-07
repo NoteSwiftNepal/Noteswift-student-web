@@ -78,6 +78,17 @@ const navSections = [
   },
 ];
 
+const getAvatarGradient = (theme: string) => {
+  switch (theme) {
+    case "purple": return "from-purple-500 to-indigo-700 text-white";
+    case "emerald": return "from-emerald-500 to-teal-700 text-white";
+    case "rose": return "from-rose-500 to-pink-600 text-white";
+    case "amber": return "from-amber-500 to-orange-650 text-white";
+    case "cyan": return "from-cyan-500 to-blue-600 text-white";
+    default: return "from-blue-500 to-indigo-600 text-white";
+  }
+};
+
 export function StudentLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -85,6 +96,14 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
   const { student, logout } = useStudentAuth();
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [avatarTheme, setAvatarTheme] = useState("blue");
+
+  useEffect(() => {
+    if (student) {
+      const localTheme = localStorage.getItem(`student_avatar_theme_${student.id}`);
+      setAvatarTheme(localTheme || student.avatar || "blue");
+    }
+  }, [student]);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -239,9 +258,20 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                 href="/settings"
                 className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-blue-50 transition-colors group cursor-pointer"
               >
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-xs font-black text-white shrink-0 shadow-sm">
-                  {avatarLetters}
-                </div>
+                {student.profileImage ? (
+                  <img
+                    src={student.profileImage}
+                    alt="Avatar"
+                    className="w-9 h-9 rounded-full object-cover shrink-0 shadow-sm border border-gray-150"
+                  />
+                ) : (
+                  <div className={cn(
+                    "flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br text-xs font-black shrink-0 shadow-sm",
+                    getAvatarGradient(avatarTheme)
+                  )}>
+                    {avatarLetters}
+                  </div>
+                )}
                 <div className="flex flex-col flex-1 min-w-0">
                   <span className="font-bold text-[13px] truncate text-gray-800 group-hover:text-blue-700">
                     {student.fullName || student.phoneNumber || "Student"}
@@ -249,7 +279,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                   <span className="text-[10px] text-gray-400 font-semibold truncate">
                     {student.rollNo != null ? `Roll ${student.rollNo}` : ""}
                     {student.rollNo != null && student.grade ? " · " : ""}
-                    {student.grade ? student.grade.split(" ")[0] : ""}
+                    {student.grade ? student.grade : ""}
                   </span>
                 </div>
                 <Settings size={14} className="text-gray-400 group-hover:text-blue-500 shrink-0" />

@@ -227,6 +227,29 @@ function LiveClassContent() {
     });
   };
 
+  // Early return in production if no WebRTC live stream is active
+  if (!useRealRTC && !token && !USE_MOCK_DATA) {
+    return (
+      <div className="flex flex-col items-center justify-center border border-gray-250 rounded-3xl bg-white p-12 text-center shadow-sm min-h-[400px] space-y-4">
+        <div className="h-16 w-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+          <VideoOff size={32} />
+        </div>
+        <div className="max-w-md space-y-2">
+          <h3 className="text-lg font-extrabold text-gray-800">No Ongoing Live Classes</h3>
+          <p className="text-sm text-gray-505 font-semibold leading-relaxed">
+            There is no scheduled live class active right now. Please check your timetable or wait for your instructor to initiate the session.
+          </p>
+        </div>
+        <Button 
+          onClick={() => router.push("/dashboard")}
+          className="font-bold text-xs bg-gray-105 hover:bg-gray-200 text-gray-700 rounded-xl px-4 py-2 border border-gray-250 shadow-xs"
+        >
+          Go back to Dashboard
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header Bar */}
@@ -276,24 +299,6 @@ function LiveClassContent() {
           classroomId={classroomId}
           onLeave={() => router.push("/dashboard")}
         />
-      ) : !USE_MOCK_DATA ? (
-        <div className="flex flex-col items-center justify-center border border-gray-250 rounded-3xl bg-white p-12 text-center shadow-sm min-h-[400px] space-y-4">
-          <div className="h-16 w-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
-            <VideoOff size={32} />
-          </div>
-          <div className="max-w-md space-y-2">
-            <h3 className="text-lg font-extrabold text-gray-800">No Ongoing Live Classes</h3>
-            <p className="text-sm text-gray-505 font-semibold leading-relaxed">
-              There is no scheduled live class active right now. Please check your timetable or wait for your instructor to initiate the session.
-            </p>
-          </div>
-          <Button 
-            onClick={() => router.push("/dashboard")}
-            className="font-bold text-xs bg-gray-105 hover:bg-gray-200 text-gray-700 rounded-xl px-4 py-2 border border-gray-250 shadow-xs"
-          >
-            Go back to Dashboard
-          </Button>
-        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Player & Meta */}
