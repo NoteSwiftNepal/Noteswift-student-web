@@ -49,6 +49,8 @@ export function normalizeStudent(data: any): StudentProfile {
     fullName: data.full_name || data.fullName || "",
     phoneNumber: data.phone_number || data.phoneNumber || "",
     avatarEmoji: data.avatarEmoji || "🎓",
+    avatar: data.profileImage || data.avatar || "blue",
+    profileImage: data.profileImage || null,
     rollNo: data.rollNo ?? data.roll_no ?? null,
     grade: typeof data.grade === "number" ? `Grade ${data.grade}` : (data.grade || ""),
     schoolName: data.address?.institution || data.schoolName || "",
@@ -123,10 +125,32 @@ export const api = {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      const normalized = data.result || data.data ? normalizeStudent(data.result || data.data) : undefined;
+      const studentObj = data.result?.student || data.result || data.data;
+      const normalized = studentObj ? normalizeStudent(studentObj) : undefined;
       return { success: res.ok && !data.error, data: normalized, message: data.message };
     } catch (err: any) {
       return { success: false, message: err.message || "Failed to update profile" };
+    }
+  },
+
+  async uploadProfileImage(imageData: string): Promise<{ success: boolean; data?: { imageUrl: string }; message?: string }> {
+    if (USE_MOCK_DATA) {
+      return { success: true, data: { imageUrl: imageData } };
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/student/user/upload-profile-image`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ imageData }),
+      });
+      const data = await res.json();
+      return { 
+        success: res.ok && !data.error, 
+        data: { imageUrl: data.result?.imageUrl || data.imageUrl }, 
+        message: data.message 
+      };
+    } catch (err: any) {
+      return { success: false, message: err.message || "Failed to upload profile image" };
     }
   },
 

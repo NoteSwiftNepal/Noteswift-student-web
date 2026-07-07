@@ -169,8 +169,14 @@ function SettingsContent() {
       setInstitution(student.schoolName || student.address?.institution || "");
       setProvince(student.address?.province || "");
       setDistrict(student.address?.district || "");
-      setAvatar(student.avatar || "blue");
+      
+      const localTheme = localStorage.getItem(`student_avatar_theme_${student.id}`);
+      setAvatar(localTheme || student.avatar || "blue");
       setLinkingCode(student.linkingCode || "");
+      
+      if (student.profileImage) {
+        setCustomAvatarUrl(student.profileImage);
+      }
     }
   }, [student]);
 
@@ -263,33 +269,64 @@ function SettingsContent() {
     e.preventDefault();
     setIsSaving(true);
     
-    // Aligns with backend req.body mapping: full_name, grade, email, address { province, district, institution }
-    const res = await api.updateProfile({
-      fullName,
-      email,
-      grade: `Grade ${grade}`,
-      schoolName: institution,
-      address: {
-        province,
-        district,
-        institution
-      },
-      avatar: customAvatarUrl || avatar
-    });
-    setIsSaving(false);
+    try {
+      let currentAvatarUrl = customAvatarUrl;
 
-    if (res.success && res.data) {
-      updateProfile(res.data);
-      toast({
-        title: "Profile Updated",
-        description: "Your student profile has been synced with database.",
+      // 1. If there's a new base64 image, upload it first
+      if (customAvatarUrl && customAvatarUrl.startsWith("data:image/")) {
+        const uploadRes = await api.uploadProfileImage(customAvatarUrl);
+        if (uploadRes.success && uploadRes.data?.imageUrl) {
+          currentAvatarUrl = uploadRes.data.imageUrl;
+          setCustomAvatarUrl(uploadRes.data.imageUrl);
+        } else {
+          toast({
+            title: "Avatar Upload Failed",
+            description: uploadRes.message || "Could not upload profile picture.",
+            variant: "destructive",
+          });
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // 2. Save the rest of the profile data using the context's updateProfile method
+      const res = await updateProfile({
+        fullName,
+        email,
+        grade: `Grade ${grade}`,
+        schoolName: institution,
+        address: {
+          province,
+          district,
+          institution
+        },
+        avatar: currentAvatarUrl || avatar
       });
-    } else {
+
+      if (res.success) {
+        // Save local theme preference if no custom avatar uploaded
+        if (avatar && (!currentAvatarUrl || !currentAvatarUrl.startsWith("http"))) {
+          localStorage.setItem(`student_avatar_theme_${student.id}`, avatar);
+        }
+        toast({
+          title: "Profile Updated",
+          description: "Your student profile has been synced with database.",
+        });
+      } else {
+        toast({
+          title: "Update Failed",
+          description: "Failed to update profile info.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
       toast({
-        title: "Update Failed",
-        description: res.message || "Failed to update profile.",
+        title: "Error occurred",
+        description: err.message || "An unexpected error occurred.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 

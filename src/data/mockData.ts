@@ -18,6 +18,7 @@ export interface StudentProfile {
     institution?: string;
   };
   avatar?: string;
+  profileImage?: string | null;
   linkingCode?: string;
   parentLinked?: boolean;
   parentName?: string | null;
