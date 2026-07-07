@@ -309,52 +309,48 @@ function CourseExplorerContent() {
           });
 
           return (
-            <Card key={c.id || c._id} className="border border-gray-300 shadow-sm bg-white rounded-2xl overflow-hidden hover:shadow-md transition-all flex flex-col justify-between">
+            <Card key={c.id || c._id} className="border border-gray-250 shadow-sm bg-white rounded-2xl overflow-hidden hover:shadow-md transition-all flex flex-col justify-between group">
               <div>
                 {/* Course Header Banner */}
                 <div 
-                  className="h-32 relative text-white overflow-hidden rounded-t-2xl"
+                  className="h-32 relative overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center"
                   style={c.gradient && c.gradient.includes("gradient") ? { background: c.gradient } : undefined}
                 >
                   {c.thumbnail ? (
-                    <>
-                      <img 
-                        src={c.thumbnail} 
-                        alt={c.title} 
-                        className="absolute inset-0 w-full h-full object-cover brightness-[0.8] transition-transform duration-300 group-hover:scale-105" 
-                      />
-                      {/* Gradient overlay to ensure text contrast and premium branding */}
-                      <div 
-                        className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-transparent z-0" 
-                      />
-                    </>
-                  ) : (
-                    <div 
-                      className={`absolute inset-0 ${c.gradient && !c.gradient.includes("gradient") ? c.gradient : "bg-gradient-to-br from-blue-500 to-indigo-650"}`}
-                      style={c.gradient && c.gradient.includes("gradient") ? { background: c.gradient } : undefined}
+                    <img 
+                      src={c.thumbnail} 
+                      alt={c.title} 
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
                     />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-white/90">
+                      <BookOpen className="h-10 w-10 stroke-[1.5]" />
+                    </div>
                   )}
-                  <div className="absolute inset-0 p-5 flex flex-col justify-between z-10">
-                    <div className="flex justify-between items-start">
-                      <Badge className="bg-white/20 text-white font-extrabold text-[9px] px-2 py-0.5 rounded-full uppercase border-0 backdrop-blur-sm">
-                        {c.program}
-                      </Badge>
-                      {c.type === "featured" && (
-                        <Badge className="bg-yellow-400 text-yellow-950 font-extrabold text-[8px] px-2 py-0.5 rounded-full uppercase border-0 flex items-center gap-1 shadow-sm">
-                          <Sparkles className="h-2.5 w-2.5" />
-                          Featured
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] text-blue-100 font-bold">{c.offeredBy}</span>
-                      <h3 className="text-base font-extrabold leading-snug line-clamp-1">{c.title}</h3>
-                    </div>
-                  </div>
+                  {c.type === "featured" && (
+                    <Badge className="absolute top-3 right-3 bg-yellow-400 text-yellow-950 font-extrabold text-[8px] px-2 py-0.5 rounded-full uppercase border-0 flex items-center gap-1 shadow-sm z-10">
+                      <Sparkles className="h-2.5 w-2.5" />
+                      Featured
+                    </Badge>
+                  )}
                 </div>
 
-                <CardContent className="p-5 space-y-4">
-                  <p className="text-xs sm:text-sm text-gray-650 line-clamp-3 leading-relaxed">
+                <CardContent className="p-5 space-y-3.5">
+                  {/* Category & Program Row */}
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                    <span>{c.offeredBy || "Note Swift"}</span>
+                    <Badge className="bg-blue-50 text-blue-700 font-extrabold text-[9px] px-2.5 py-0.5 rounded-full border-0">
+                      {c.program}
+                    </Badge>
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-base font-extrabold text-gray-800 leading-snug line-clamp-1 group-hover:text-blue-600 transition-colors">
+                    {c.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-xs sm:text-sm text-gray-500 line-clamp-2 leading-relaxed">
                     {c.description}
                   </p>
 
