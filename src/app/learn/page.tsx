@@ -64,17 +64,9 @@ function LearningFeedContent() {
       setAssignments(assignmentsRes.data);
     }
 
-    // Refresh enrollments from local DB
-    if (typeof window !== "undefined") {
-      const rawDb = localStorage.getItem("noteswift_student_mock_db");
-      if (rawDb) {
-        try {
-          const db = JSON.parse(rawDb);
-          setEnrollments(db.enrollments || []);
-        } catch (e) {
-          console.error(e);
-        }
-      }
+    const enrollRes = await api.getMyEnrollments();
+    if (enrollRes.success && enrollRes.data) {
+      setEnrollments(enrollRes.data);
     }
   };
 

@@ -44,6 +44,7 @@ function CourseExplorerContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"all" | "my">("all");
   
   // Sheet open state
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
@@ -56,22 +57,17 @@ function CourseExplorerContent() {
   const loadCoursesData = async () => {
     try {
       setIsLoading(true);
-      const res = await api.getCourses();
-      if (res.success && res.data) {
-        setCourses(res.data);
-      }
-      
-      // Read local database directly to get fresh state on mutate
+      const [coursesRes, enrollRes] = await Promise.all([
+        api.getCourses(),
+        api.getMyEnrollments(),
+      ]);
+      if (coursesRes.success && coursesRes.data) setCourses(coursesRes.data);
+      if (enrollRes.success && enrollRes.data) setEnrollments(enrollRes.data);
+      // Trials: still from localStorage for mock mode; real endpoint TBD
       if (typeof window !== "undefined") {
         const rawDb = localStorage.getItem("noteswift_student_mock_db");
         if (rawDb) {
-          try {
-            const db = JSON.parse(rawDb);
-            setEnrollments(db.enrollments || []);
-            setTrials(db.trials || []);
-          } catch (e) {
-            console.error(e);
-          }
+          try { setTrials(JSON.parse(rawDb).trials || []); } catch {}
         }
       }
     } catch (err) {
@@ -182,9 +178,23 @@ function CourseExplorerContent() {
   }
 
   // Filter courses
-  const filteredCourses = courses.filter((c) => {
-    const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          c.description.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredCourses = (activeTab === "my"
+    ? courses.filter((c) => {
+        const enrolled = enrollments.some((e) => {
+          const eCourseId = typeof e.courseId === "object" ? e.courseId.id || e.courseId._id : e.courseId;
+          return eCourseId === c.id || eCourseId === c._id;
+        });
+        const trialing = trials.some((t) => {
+          const tCourseId = typeof t.courseId === "object" ? t.courseId.id || t.courseId._id : t.courseId;
+          return tCourseId === c.id || tCourseId === c._id;
+        });
+        return enrolled || trialing;
+      })
+    : courses
+  ).filter((c) => {
+    const matchesSearch =
+      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTag = selectedTag ? c.tags.includes(selectedTag) : true;
     return matchesSearch && matchesTag;
   });
@@ -196,6 +206,35 @@ function CourseExplorerContent() {
   
   return (
     <div className="flex flex-col gap-6">
+      {/* ─── Tabs ─── */}
+      <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setActiveTab("all")}
+          className={`px-5 py-2 rounded-lg text-xs font-bold transition-all duration-200 ${
+            activeTab === "all"
+              ? "bg-white text-blue-700 shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          All Courses
+        </button>
+        <button
+          onClick={() => setActiveTab("my")}
+          className={`px-5 py-2 rounded-lg text-xs font-bold transition-all duration-200 ${
+            activeTab === "my"
+              ? "bg-white text-blue-700 shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          My Courses
+          {enrollments.length + trials.length > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-blue-600 text-white text-[9px] font-black leading-none">
+              {enrollments.length + trials.length}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Search and filter bar */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 border border-gray-300 rounded-2xl shadow-sm">
         <div className="relative w-full sm:max-w-xs">
@@ -232,12 +271,38 @@ function CourseExplorerContent() {
       </div>
 
       {/* Courses grid */}
+      {filteredCourses.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+            <BookOpen className="w-8 h-8 text-blue-400" />
+          </div>
+          <div>
+            <p className="font-bold text-gray-700 text-sm">
+              {activeTab === "my" ? "No enrolled courses yet" : "No courses found"}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {activeTab === "my"
+                ? "Go to All Courses tab to browse and enroll."
+                : "Try adjusting your search or tag filters."}
+            </p>
+          </div>
+          {activeTab === "my" && (
+            <button
+              onClick={() => setActiveTab("all")}
+              className="mt-1 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-sm hover:shadow-md transition-shadow"
+            >
+              Browse All Courses
+            </button>
+          )}
+        </div>
+      ) : (
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredCourses.map((c) => {
           const isEnrolled = enrollments.some(e => {
             const eCourseId = typeof e.courseId === "object" ? e.courseId.id || e.courseId._id : e.courseId;
             return eCourseId === c.id || eCourseId === c._id;
           });
+
           const hasTrial = trials.some(t => {
             const tCourseId = typeof t.courseId === "object" ? t.courseId.id || t.courseId._id : t.courseId;
             return tCourseId === c.id || tCourseId === c._id;
@@ -417,6 +482,7 @@ function CourseExplorerContent() {
           );
         })}
       </div>
+      )}
 
       {/* Checkout/Unlock Dialog */}
       <Dialog open={!!checkoutCourseId} onOpenChange={(open) => { if (!open) { setCheckoutCourseId(null); setUnlockCode(""); } }}>

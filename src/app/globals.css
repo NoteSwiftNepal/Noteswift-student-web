@@ -76,7 +76,7 @@
 
 @layer base {
   html {
-    font-size: 88%; /* Reduces overall default font size to ~14px to scale down text */
+    font-size: 93%; /* Slightly larger base — ~15px */
   }
   * {
     @apply border-border;
@@ -135,4 +135,13 @@
 
 .animation-delay-4000 {
   animation-delay: 4s;
+}
+
+/* Hide scrollbar while keeping scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE / Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             /* Chrome / Safari / Opera */
 }

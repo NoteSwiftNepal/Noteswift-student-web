@@ -243,6 +243,21 @@ export const api = {
     }
   },
 
+  async getMyEnrollments(): Promise<{ success: boolean; data?: CourseEnrollment[]; message?: string }> {
+    if (USE_MOCK_DATA) {
+      const db = getMockDB();
+      return { success: true, data: db.enrollments };
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/student/courses/my-enrollments`, { headers: getHeaders() });
+      const data = await res.json();
+      if (!res.ok || data.error) return { success: false, data: [], message: data.message };
+      return { success: true, data: safeArray(data.result, data.data), message: data.message };
+    } catch (err: any) {
+      return { success: false, message: err.message || "Failed to load enrollments" };
+    }
+  },
+
   async enrollInCourse(courseId: string): Promise<{ success: boolean; message?: string }> {
     if (USE_MOCK_DATA) {
       const db = getMockDB();
