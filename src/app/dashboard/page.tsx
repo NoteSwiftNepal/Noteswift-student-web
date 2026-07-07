@@ -240,9 +240,19 @@ function DashboardContent() {
                     href="/learn"
                     className="flex-shrink-0 w-56 p-4 border border-gray-200 rounded-xl hover:shadow-sm hover:border-blue-200 transition-all bg-gradient-to-b from-white to-gray-50/30 group space-y-3"
                   >
-                    <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                      <BookOpen size={16} className="text-white" />
-                    </div>
+                    {course.thumbnail ? (
+                      <div className="h-8 w-8 rounded-lg overflow-hidden shrink-0 border border-gray-150">
+                        <img 
+                          src={course.thumbnail} 
+                          alt={course.title} 
+                          className="w-full h-full object-cover" 
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
+                        <BookOpen size={16} className="text-white" />
+                      </div>
+                    )}
                     <div>
                       <p className="text-[10px] text-blue-600 font-bold uppercase">{course.program}</p>
                       <h4 className="text-xs font-extrabold text-gray-800 line-clamp-2 leading-snug mt-0.5">{course.title}</h4>

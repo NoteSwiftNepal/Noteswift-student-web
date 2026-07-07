@@ -312,21 +312,32 @@ function CourseExplorerContent() {
             <Card key={c.id || c._id} className="border border-gray-300 shadow-sm bg-white rounded-2xl overflow-hidden hover:shadow-md transition-all flex flex-col justify-between">
               <div>
                 {/* Course Header Banner */}
-                <div className="h-32 bg-gradient-to-br from-blue-500 to-indigo-600 p-5 flex flex-col justify-between relative text-white">
-                  <div className="flex justify-between items-start">
-                    <Badge className="bg-white/20 text-white font-extrabold text-[9px] px-2 py-0.5 rounded-full uppercase border-0 backdrop-blur-sm">
-                      {c.program}
-                    </Badge>
-                    {c.type === "featured" && (
-                      <Badge className="bg-yellow-400 text-yellow-950 font-extrabold text-[8px] px-2 py-0.5 rounded-full uppercase border-0 flex items-center gap-1 shadow-sm">
-                        <Sparkles className="h-2.5 w-2.5" />
-                        Featured
+                <div className="h-32 relative text-white overflow-hidden rounded-t-2xl">
+                  {c.thumbnail ? (
+                    <img 
+                      src={c.thumbnail} 
+                      alt={c.title} 
+                      className="absolute inset-0 w-full h-full object-cover brightness-[0.75] transition-transform duration-300 group-hover:scale-105" 
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600" />
+                  )}
+                  <div className="absolute inset-0 p-5 flex flex-col justify-between z-10">
+                    <div className="flex justify-between items-start">
+                      <Badge className="bg-white/20 text-white font-extrabold text-[9px] px-2 py-0.5 rounded-full uppercase border-0 backdrop-blur-sm">
+                        {c.program}
                       </Badge>
-                    )}
-                  </div>
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] text-blue-100 font-bold">{c.offeredBy}</span>
-                    <h3 className="text-base font-extrabold leading-snug line-clamp-1">{c.title}</h3>
+                      {c.type === "featured" && (
+                        <Badge className="bg-yellow-400 text-yellow-950 font-extrabold text-[8px] px-2 py-0.5 rounded-full uppercase border-0 flex items-center gap-1 shadow-sm">
+                          <Sparkles className="h-2.5 w-2.5" />
+                          Featured
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-blue-100 font-bold">{c.offeredBy}</span>
+                      <h3 className="text-base font-extrabold leading-snug line-clamp-1">{c.title}</h3>
+                    </div>
                   </div>
                 </div>
 

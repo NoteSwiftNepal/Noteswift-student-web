@@ -82,6 +82,7 @@ export interface Course {
   keyFeatures: string[];
   syllabus: SyllabusItem[];
   faq: { question: string; answer: string }[];
+  thumbnail?: string;
   createdAt: string;
   updatedAt: string;
 }
