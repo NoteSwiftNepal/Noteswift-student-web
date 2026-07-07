@@ -83,6 +83,9 @@ export interface Course {
   syllabus: SyllabusItem[];
   faq: { question: string; answer: string }[];
   thumbnail?: string;
+  gradient?: string;
+  color?: string;
+  themeColor?: string;
   createdAt: string;
   updatedAt: string;
 }

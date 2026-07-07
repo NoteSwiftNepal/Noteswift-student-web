@@ -249,8 +249,11 @@ function DashboardContent() {
                         />
                       </div>
                     ) : (
-                      <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
-                        <BookOpen size={16} className="text-white" />
+                      <div 
+                        className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 text-white ${course.gradient && !course.gradient.includes("gradient") ? course.gradient : "bg-gradient-to-br from-blue-500 to-indigo-600"}`}
+                        style={course.gradient && course.gradient.includes("gradient") ? { background: course.gradient } : undefined}
+                      >
+                        <BookOpen size={16} />
                       </div>
                     )}
                     <div>

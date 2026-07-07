@@ -312,15 +312,27 @@ function CourseExplorerContent() {
             <Card key={c.id || c._id} className="border border-gray-300 shadow-sm bg-white rounded-2xl overflow-hidden hover:shadow-md transition-all flex flex-col justify-between">
               <div>
                 {/* Course Header Banner */}
-                <div className="h-32 relative text-white overflow-hidden rounded-t-2xl">
+                <div 
+                  className="h-32 relative text-white overflow-hidden rounded-t-2xl"
+                  style={c.gradient && c.gradient.includes("gradient") ? { background: c.gradient } : undefined}
+                >
                   {c.thumbnail ? (
-                    <img 
-                      src={c.thumbnail} 
-                      alt={c.title} 
-                      className="absolute inset-0 w-full h-full object-cover brightness-[0.75] transition-transform duration-300 group-hover:scale-105" 
-                    />
+                    <>
+                      <img 
+                        src={c.thumbnail} 
+                        alt={c.title} 
+                        className="absolute inset-0 w-full h-full object-cover brightness-[0.8] transition-transform duration-300 group-hover:scale-105" 
+                      />
+                      {/* Gradient overlay to ensure text contrast and premium branding */}
+                      <div 
+                        className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-transparent z-0" 
+                      />
+                    </>
                   ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600" />
+                    <div 
+                      className={`absolute inset-0 ${c.gradient && !c.gradient.includes("gradient") ? c.gradient : "bg-gradient-to-br from-blue-500 to-indigo-650"}`}
+                      style={c.gradient && c.gradient.includes("gradient") ? { background: c.gradient } : undefined}
+                    />
                   )}
                   <div className="absolute inset-0 p-5 flex flex-col justify-between z-10">
                     <div className="flex justify-between items-start">
