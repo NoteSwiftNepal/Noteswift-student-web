@@ -6,6 +6,88 @@ import { USE_MOCK_DATA, API_BASE_URL } from "@/config/app-config";
 import { StudentProfile, initialMockDatabase } from "@/data/mockData";
 import { api, normalizeStudent } from "@/services/api";
 
+// Auto-intercept fetch requests to perform silent token refreshes in background
+if (typeof window !== "undefined" && !(window as any)._fetchPatched) {
+  (window as any)._fetchPatched = true;
+  const originalFetch = window.fetch;
+  window.fetch = async function (input, init) {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : (input as Request).url;
+    
+    // Only intercept backend API calls and avoid intercepting the /refresh call to prevent loop
+    if (url && url.includes(API_BASE_URL) && !url.includes("/student/auth/refresh")) {
+      let token = localStorage.getItem("studentToken");
+      const refreshToken = localStorage.getItem("studentRefreshToken");
+      const expiry = localStorage.getItem("studentLoginExpiry");
+      const fingerprint = localStorage.getItem("studentDeviceFingerprint");
+      
+      if (token && refreshToken && expiry) {
+        // If 1-month login session has expired
+        if (Date.now() > Number(expiry)) {
+          localStorage.removeItem("studentToken");
+          localStorage.removeItem("studentRefreshToken");
+          localStorage.removeItem("studentLoginExpiry");
+          localStorage.removeItem("studentProfile");
+          token = null;
+        } else {
+          // Decode token to check expiration. If it expires in less than 60 seconds, refresh it.
+          const isExpired = (() => {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              return payload.exp * 1000 < Date.now() + 60 * 1000;
+            } catch {
+              return true;
+            }
+          })();
+          
+          if (isExpired && !USE_MOCK_DATA) {
+            try {
+              const res = await originalFetch(`${API_BASE_URL}/student/auth/refresh`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(fingerprint ? { "x-device-fingerprint": fingerprint } : {})
+                },
+                body: JSON.stringify({ refreshToken })
+              });
+              
+              if (res.ok) {
+                const data = await res.json();
+                const newToken = data?.result?.accessToken;
+                if (newToken) {
+                  localStorage.setItem("studentToken", newToken);
+                  token = newToken;
+                  
+                  // Update authorization header in the ongoing request configuration
+                  if (init) {
+                    if (!init.headers) {
+                      init.headers = {};
+                    }
+                    if (init.headers instanceof Headers) {
+                      init.headers.set("Authorization", `Bearer ${newToken}`);
+                    } else if (Array.isArray(init.headers)) {
+                      const idx = init.headers.findIndex(h => h[0].toLowerCase() === 'authorization');
+                      if (idx !== -1) {
+                        init.headers[idx] = ['Authorization', `Bearer ${newToken}`];
+                      } else {
+                        init.headers.push(['Authorization', `Bearer ${newToken}`]);
+                      }
+                    } else {
+                      (init.headers as any)["Authorization"] = `Bearer ${newToken}`;
+                    }
+                  }
+                }
+              }
+            } catch (err) {
+              console.error("Failed to auto-refresh access token:", err);
+            }
+          }
+        }
+      }
+    }
+    return originalFetch.apply(this, [input, init]);
+  };
+}
+
 interface StudentAuthContextType {
   student: StudentProfile | null;
   loading: boolean;
@@ -35,8 +117,15 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       const token = localStorage.getItem("studentToken");
+      const expiry = localStorage.getItem("studentLoginExpiry");
       if (!token) {
         setStudent(null);
+        return;
+      }
+
+      // Check if 1-month login session has expired
+      if (expiry && Date.now() > Number(expiry)) {
+        logout();
         return;
       }
 
@@ -223,6 +312,7 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
         }
 
         const token = resultData.accessToken || resultData.token;
+        const refreshToken = resultData.refreshToken;
         const rawUser = resultData.user || resultData.student;
         const normalized = normalizeStudent(rawUser);
 
@@ -230,7 +320,14 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
           return { success: false, message: "Token not returned from server" };
         }
 
+        // Set one month login expiry (30 days)
+        const expiryTime = Date.now() + 30 * 24 * 60 * 60 * 1000;
+
         localStorage.setItem("studentToken", token);
+        if (refreshToken) {
+          localStorage.setItem("studentRefreshToken", refreshToken);
+        }
+        localStorage.setItem("studentLoginExpiry", expiryTime.toString());
         localStorage.setItem("studentPhone", pendingPhone);
         localStorage.setItem("studentProfile", JSON.stringify(normalized));
         setStudent(normalized);
@@ -244,6 +341,8 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
       }
 
       localStorage.setItem("studentToken", "mock-student-jwt-token-12345");
+      localStorage.setItem("studentRefreshToken", "mock-student-refresh-token-12345");
+      localStorage.setItem("studentLoginExpiry", (Date.now() + 30 * 24 * 60 * 60 * 1000).toString());
       localStorage.setItem("studentPhone", pendingPhone);
 
       if (pendingRegData) {
@@ -300,6 +399,8 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("studentToken");
+    localStorage.removeItem("studentRefreshToken");
+    localStorage.removeItem("studentLoginExpiry");
     localStorage.removeItem("studentPhone");
     localStorage.removeItem("studentProfile");
     localStorage.removeItem("noteswift_student_mock_db"); // Clear mock database too on complete logout for reset
