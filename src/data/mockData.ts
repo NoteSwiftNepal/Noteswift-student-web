@@ -144,6 +144,8 @@ export interface MCQQuestion {
   options: MCQOption[];
   correctOptionId: string;
   explanation: string;
+  hasLatex?: boolean;
+  usesLatex?: boolean;
 }
 
 export interface MockTest {

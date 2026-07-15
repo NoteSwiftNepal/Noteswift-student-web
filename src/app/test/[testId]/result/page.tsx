@@ -20,6 +20,7 @@ import { DashboardGuard } from "@/components/auth-guard";
 import { StudentLayout } from "@/components/student-layout";
 import { api } from "@/services/api";
 import { MockTest, TestAttempt } from "@/data/mockData";
+import { LatexPreview } from "@/components/latex-preview";
 
 interface ResultPageProps {
   params: Promise<{ testId: string }>;
@@ -141,7 +142,7 @@ function TestResultContent({ testId }: { testId: string }) {
                   </span>
                   <div className="space-y-1 pt-0.5">
                     <h4 className="text-xs sm:text-sm font-bold text-gray-800 leading-relaxed">
-                      {q.text}
+                      <LatexPreview content={q.text} enabled={q.hasLatex || (q as any).usesLatex} inline={true} />
                     </h4>
                   </div>
                   <div className="ml-auto shrink-0 pt-0.5">
@@ -184,7 +185,9 @@ function TestResultContent({ testId }: { testId: string }) {
                             <div className="h-4.5 w-4.5 rounded-full border border-gray-400" />
                           )}
                         </div>
-                        <span className="text-xs sm:text-sm">{opt.text}</span>
+                        <span className="text-xs sm:text-sm">
+                          <LatexPreview content={opt.text} enabled={q.hasLatex || (q as any).usesLatex} inline={true} />
+                        </span>
                       </div>
                     );
                   })}
@@ -197,9 +200,9 @@ function TestResultContent({ testId }: { testId: string }) {
                       <BookOpen className="h-3 w-3 text-indigo-600" />
                       Academic Explanation
                     </span>
-                    <p className="text-xs text-gray-600 leading-relaxed font-semibold">
-                      {q.explanation}
-                    </p>
+                    <div className="text-xs text-gray-600 leading-relaxed font-semibold">
+                      <LatexPreview content={q.explanation} enabled={q.hasLatex || (q as any).usesLatex} inline={true} />
+                    </div>
                   </div>
                 </div>
               </Card>

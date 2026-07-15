@@ -23,6 +23,7 @@ import { StudentLayout } from "@/components/student-layout";
 import { api } from "@/services/api";
 import { MockTest } from "@/data/mockData";
 import { useToast } from "@/hooks/use-toast";
+import { LatexPreview } from "@/components/latex-preview";
 
 interface TestPageProps {
   params: Promise<{ testId: string }>;
@@ -163,7 +164,7 @@ function ActiveTestContent({ testId }: { testId: string }) {
                   {idx + 1}
                 </span>
                 <h4 className="text-xs sm:text-sm font-bold text-gray-800 leading-relaxed pt-0.5">
-                  {q.text}
+                  <LatexPreview content={q.text} enabled={q.hasLatex || (q as any).usesLatex} inline={true} />
                 </h4>
               </div>
 
@@ -184,7 +185,7 @@ function ActiveTestContent({ testId }: { testId: string }) {
                   >
                     <RadioGroupItem value={opt.id} id={opt.id} className="border-gray-400 text-blue-600 focus:ring-blue-500 shrink-0" />
                     <Label htmlFor={opt.id} className="text-xs sm:text-sm cursor-pointer w-full leading-normal">
-                      {opt.text}
+                      <LatexPreview content={opt.text} enabled={q.hasLatex || (q as any).usesLatex} inline={true} />
                     </Label>
                   </div>
                 ))}
