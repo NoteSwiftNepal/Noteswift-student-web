@@ -45,13 +45,10 @@ function ActiveTestContent({ testId }: { testId: string }) {
 
   useEffect(() => {
     const loadTest = async () => {
-      const res = await api.getTests();
+      const res = await api.getTestDetails(testId);
       if (res.success && res.data) {
-        const found = res.data.find(t => t.id === testId);
-        if (found) {
-          setTest(found);
-          setTimeLeft(found.durationMinutes * 60);
-        }
+        setTest(res.data);
+        setTimeLeft(res.data.durationMinutes * 60);
       }
     };
     loadTest();

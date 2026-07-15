@@ -543,14 +543,97 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/student/tests`, { headers: getHeaders() });
       const data = await res.json();
       if (!res.ok || data.error) return { success: false, data: [], attempts: [], message: data.message };
+      
+      const rawTests = safeArray(data.result?.tests, data.data);
+      const mappedAttempts: TestAttempt[] = [];
+      const mappedTests = rawTests.map((t: any) => {
+        const testId = t._id || t.id;
+        if (t.attemptInfo) {
+          mappedAttempts.push({
+            id: t.attemptInfo.attemptId || `att-${testId}`,
+            testId: testId,
+            studentId: "",
+            attemptedAt: t.attemptInfo.submittedAt || t.attemptInfo.startedAt || new Date().toISOString(),
+            score: t.attemptInfo.totalScore || 0,
+            totalMarks: t.totalMarks || 0,
+            answers: {},
+            completed: t.attemptInfo.status === 'submitted' || t.attemptInfo.status === 'evaluated',
+            timeSpentSeconds: t.attemptInfo.timeSpent || 0
+          });
+        }
+        return {
+          id: testId,
+          subject: t.subjectName || "Subject",
+          title: t.title,
+          durationMinutes: t.duration || 0,
+          totalMarks: t.totalMarks || 0,
+          classAverage: t.avgScore || 0,
+          type: (t.type === 'mcq' ? 'mcq' : 'pdf') as 'mcq' | 'pdf',
+          pdfUrl: t.pdfUrl,
+          questions: []
+        };
+      });
+
       return {
         success: true,
-        data: safeArray(data.result?.tests, data.data),
-        attempts: safeArray(data.result?.attempts),
+        data: mappedTests,
+        attempts: mappedAttempts,
         message: data.message,
       };
     } catch (err: any) {
       return { success: false, message: err.message || "Failed to load tests" };
+    }
+  },
+
+  async getTestDetails(testId: string): Promise<{ success: boolean; data?: MockTest; message?: string }> {
+    if (USE_MOCK_DATA) {
+      const db = getMockDB();
+      const test = db.tests.find(t => t.id === testId);
+      return { success: true, data: test };
+    }
+    try {
+      // 1. Initialize attempt on the backend first
+      await fetch(`${API_BASE_URL}/student/tests/${testId}/start`, {
+        method: "POST",
+        headers: getHeaders()
+      });
+
+      // 2. Fetch the test details
+      const res = await fetch(`${API_BASE_URL}/student/tests/${testId}`, { headers: getHeaders() });
+      const data = await res.json();
+      if (!res.ok || data.error) return { success: false, message: data.message };
+      
+      const rawTest = data.result || data.data || data;
+      const optionKeys = ['A', 'B', 'C', 'D'];
+      const mappedTest: MockTest = {
+        id: rawTest._id || rawTest.id,
+        subject: rawTest.subjectName || "Subject",
+        title: rawTest.title,
+        durationMinutes: rawTest.duration || 0,
+        totalMarks: rawTest.totalMarks || 0,
+        classAverage: rawTest.avgScore || 0,
+        type: (rawTest.type === 'mcq' ? 'mcq' : 'pdf') as 'mcq' | 'pdf',
+        pdfUrl: rawTest.pdfUrl,
+        questions: rawTest.questions?.map((q: any) => {
+          const mappedOptions = (q.options || []).map((optStr: string, idx: number) => ({
+            id: optionKeys[idx] || String(idx),
+            text: optStr
+          }));
+          return {
+            id: q.questionNumber ? String(q.questionNumber) : String(q.id || Math.random()),
+            text: q.question || q.questionText || "",
+            options: mappedOptions,
+            correctOptionId: q.correctAnswer || "",
+            explanation: q.explanation || "",
+            hasLatex: q.hasLatex || q.usesLatex || false,
+            usesLatex: q.hasLatex || q.usesLatex || false
+          };
+        }) || []
+      };
+      
+      return { success: true, data: mappedTest };
+    } catch (err: any) {
+      return { success: false, message: err.message || "Failed to load test details" };
     }
   },
 
@@ -588,15 +671,92 @@ export const api = {
       return { success: true, data: newAttempt };
     }
     try {
+      const formattedAnswers = Object.entries(answers).map(([qId, selectedOptionId]) => ({
+        questionNumber: parseInt(qId, 10) || 1,
+        answer: selectedOptionId
+      }));
       const res = await fetch(`${API_BASE_URL}/student/tests/${testId}/submit`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({ answers, timeSpentSeconds }),
+        body: JSON.stringify({ answers: formattedAnswers, timeSpent: timeSpentSeconds }),
       });
       const data = await res.json();
       return { success: res.ok && !data.error, data: data.result || data.data, message: data.message };
     } catch (err: any) {
       return { success: false, message: err.message || "Failed to submit test" };
+    }
+  },
+
+  async getTestResults(testId: string, attemptId: string): Promise<{ success: boolean; test?: MockTest; attempt?: TestAttempt; message?: string }> {
+    if (USE_MOCK_DATA) {
+      const db = getMockDB();
+      const test = db.tests.find(t => t.id === testId);
+      const attempt = db.testAttempts.find(a => a.id === attemptId || (a.testId === testId && a.completed));
+      return { success: true, test, attempt };
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/student/tests/${testId}/results/${attemptId}`, { headers: getHeaders() });
+      const data = await res.json();
+      if (!res.ok || data.error) return { success: false, message: data.message };
+      
+      const raw = data.result || data.data || data;
+      const optionKeys = ['A', 'B', 'C', 'D'];
+      
+      const mappedQuestions = (raw.attempt?.answers || []).map((ans: any) => {
+        const mappedOptions = (ans.options || []).map((optStr: string, idx: number) => ({
+          id: optionKeys[idx] || String(idx),
+          text: optStr
+        }));
+        
+        return {
+          id: String(ans.questionNumber),
+          text: ans.question || "",
+          options: mappedOptions,
+          correctOptionId: optionKeys[ans.correctOption] || "",
+          explanation: ans.explanation || "",
+          hasLatex: ans.hasLatex || false,
+          usesLatex: ans.hasLatex || false
+        };
+      });
+
+      const mappedAnswers: { [key: string]: string } = {};
+      (raw.attempt?.answers || []).forEach((ans: any) => {
+        const qId = String(ans.questionNumber);
+        const selectedOptionId = optionKeys[ans.selectedOption] || "";
+        mappedAnswers[qId] = selectedOptionId;
+      });
+
+      const mappedTest: MockTest = {
+        id: raw.test?._id || raw.test?.id || testId,
+        subject: raw.test?.subjectName || "Subject",
+        title: raw.test?.title || "Test Review",
+        durationMinutes: raw.test?.duration || 0,
+        totalMarks: raw.test?.totalMarks || 0,
+        classAverage: raw.test?.avgScore || 0,
+        type: (raw.test?.type === 'mcq' ? 'mcq' : 'pdf') as 'mcq' | 'pdf',
+        pdfUrl: raw.test?.pdfUrl,
+        questions: mappedQuestions
+      };
+
+      const mappedAttempt: TestAttempt = {
+        id: raw.attempt?._id || attemptId,
+        testId: raw.test?._id || raw.test?.id || testId,
+        studentId: "",
+        attemptedAt: raw.attempt?.submittedAt || raw.attempt?.startedAt || new Date().toISOString(),
+        score: raw.attempt?.totalScore || 0,
+        totalMarks: raw.test?.totalMarks || 0,
+        answers: mappedAnswers,
+        completed: raw.attempt?.status === 'submitted' || raw.attempt?.status === 'evaluated',
+        timeSpentSeconds: raw.attempt?.timeSpent || 0
+      };
+
+      return {
+        success: true,
+        test: mappedTest,
+        attempt: mappedAttempt
+      };
+    } catch (err: any) {
+      return { success: false, message: err.message || "Failed to load test results" };
     }
   },
 

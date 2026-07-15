@@ -32,14 +32,25 @@ function TestResultContent({ testId }: { testId: string }) {
 
   useEffect(() => {
     const loadResult = async () => {
-      const res = await api.getTests();
-      if (res.success && res.data) {
-        const foundTest = res.data.find(t => t.id === testId);
-        setTest(foundTest || null);
-        
+      const listRes = await api.getTests();
+      if (listRes.success && listRes.data) {
         // Find latest attempt for this test
-        const foundAttempt = res.attempts?.filter(a => a.testId === testId).pop();
-        setAttempt(foundAttempt || null);
+        const foundAttempt = listRes.attempts?.filter(a => a.testId === testId).pop();
+        if (foundAttempt) {
+          const detailRes = await api.getTestResults(testId, foundAttempt.id);
+          if (detailRes.success && detailRes.test && detailRes.attempt) {
+            setTest(detailRes.test);
+            setAttempt(detailRes.attempt);
+          } else {
+            // Fallback to basic list data if detail fetch fails
+            const foundTest = listRes.data.find(t => t.id === testId);
+            setTest(foundTest || null);
+            setAttempt(foundAttempt);
+          }
+        } else {
+          const foundTest = listRes.data.find(t => t.id === testId);
+          setTest(foundTest || null);
+        }
       }
     };
     loadResult();
