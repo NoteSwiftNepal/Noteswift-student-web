@@ -570,7 +570,10 @@ export const api = {
           classAverage: t.avgScore || 0,
           type: (t.type === 'mcq' ? 'mcq' : 'pdf') as 'mcq' | 'pdf',
           pdfUrl: t.pdfUrl,
-          questions: []
+          questions: [],
+          availability: t.availability,
+          startTime: t.startTime,
+          endTime: t.endTime,
         };
       });
 

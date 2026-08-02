@@ -358,7 +358,6 @@ function CourseExplorerContent() {
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                       <span className="font-bold text-gray-700">{c.rating}</span>
-                      <span>({c.enrolledCount} enrolled)</span>
                     </div>
                     <span className="font-extrabold text-blue-600">
                       {c.price === 0 ? "FREE" : `Rs. ${c.price}`}

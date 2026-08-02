@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { 
-  Award, 
-  Clock, 
-  FileText, 
-  HelpCircle, 
-  CheckCircle, 
+import {
+  Award,
+  Clock,
+  FileText,
+  HelpCircle,
+  CheckCircle,
   ArrowRight,
   TrendingUp,
-  RotateCcw
+  RotateCcw,
+  Lock
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,12 @@ function TestCenterContent() {
                     <Badge variant="outline" className="text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase border-gray-300 text-gray-500">
                       {test.type.toUpperCase()}
                     </Badge>
+                    {!attempt && test.availability === "closed" && (
+                      <Badge variant="outline" className="text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase border-gray-300 text-gray-500 flex items-center gap-1">
+                        <Lock className="h-2.5 w-2.5" />
+                        Closed
+                      </Badge>
+                    )}
                   </div>
                   <CardTitle className="text-sm sm:text-base font-extrabold text-gray-850 leading-snug">{test.title}</CardTitle>
                 </div>
@@ -131,6 +138,11 @@ function TestCenterContent() {
                       <RotateCcw className="h-4 w-4 text-gray-500" />
                       Review Test Analysis
                     </Link>
+                  </Button>
+                ) : test.availability === "closed" ? (
+                  <Button disabled className="w-full bg-gray-100 text-gray-400 font-bold text-xs rounded-xl h-10 border border-gray-200 flex items-center justify-center gap-1.5 cursor-not-allowed">
+                    <Lock className="h-4 w-4" />
+                    <span>Closed</span>
                   </Button>
                 ) : (
                   <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl h-10 border border-blue-700 flex items-center justify-center gap-1.5">

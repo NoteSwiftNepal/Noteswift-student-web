@@ -33,6 +33,7 @@ function ActiveTestContent({ testId }: { testId: string }) {
   const router = useRouter();
   const { toast } = useToast();
   const [test, setTest] = useState<MockTest | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<{ [questionId: string]: string }>({});
   
   // Timer state
@@ -49,6 +50,8 @@ function ActiveTestContent({ testId }: { testId: string }) {
       if (res.success && res.data) {
         setTest(res.data);
         setTimeLeft(res.data.durationMinutes * 60);
+      } else {
+        setLoadError(res.message || "This test is not available right now.");
       }
     };
     loadTest();
@@ -103,6 +106,21 @@ function ActiveTestContent({ testId }: { testId: string }) {
       });
     }
   };
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-20 text-center max-w-md mx-auto">
+        <div className="p-3 bg-red-50 text-red-600 rounded-full">
+          <AlertCircle className="h-6 w-6" />
+        </div>
+        <p className="text-sm font-semibold text-gray-700">{loadError}</p>
+        <Button variant="outline" className="rounded-xl font-bold text-xs h-10 px-5 flex items-center gap-1.5" onClick={() => router.push("/test")}>
+          <ArrowLeft className="h-4 w-4" />
+          Back to Tests
+        </Button>
+      </div>
+    );
+  }
 
   if (!test) {
     return (

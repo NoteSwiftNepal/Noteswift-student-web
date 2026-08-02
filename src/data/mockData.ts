@@ -158,6 +158,9 @@ export interface MockTest {
   type: "mcq" | "pdf";
   pdfUrl?: string;
   questions?: MCQQuestion[];
+  availability?: "upcoming" | "open" | "closed";
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface TestAttempt {
