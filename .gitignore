@@ -40,4 +40,5 @@ next-env.d.ts
 *.sln
 *.sw?
 .DS_Store
-
+.md
+*.md

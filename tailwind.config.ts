@@ -66,6 +66,11 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        // Named NoteSwift tokens (blueprint §6) that don't map onto a shadcn
+        // semantic slot — used directly where mobile uses them by name.
+        customBlue: '#3B82F6',
+        customRed: '#dc2626',
+        buttonBlue: '#007AFF',
       },
       borderRadius: {
         lg: 'var(--radius)',
