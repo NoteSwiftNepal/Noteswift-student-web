@@ -3,11 +3,24 @@
 // moduleContentShape (not assumed from any other endpoint's shape).
 
 export interface ModuleVideo {
+  // Mongoose's auto-assigned subdocument id — present in every real
+  // response (getSubjectContent spreads the raw subdocument), just not
+  // previously declared here. Required for per-video comment scoping (see
+  // Comment.model.ts's videoId doc comment — the array index is NOT a
+  // stable key, this is).
+  _id: string;
   url: string;
   title: string;
   duration?: string;
   uploadedAt?: string;
   liveClassId?: string;
+  // Always populated by getSubjectContent (resolved server-side: the
+  // recording's actual presenting teacher for a live-class recording,
+  // falling back to the subject's general teacher assignment for a manual
+  // upload) — confirmed directly against courseContentController.ts's
+  // getSubjectContent, not assumed from the schema alone (the raw
+  // Course.model.ts schema has no per-video teacher fields at all; this
+  // request-time enrichment is genuinely where these three come from).
   teacherId?: string | null;
   teacherName?: string;
   teacherAvatar?: string;

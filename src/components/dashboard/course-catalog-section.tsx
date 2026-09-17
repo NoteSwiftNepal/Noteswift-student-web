@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { GraduationCap } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useCourses } from "@/hooks/queries/useCourses";
@@ -10,6 +10,7 @@ import { resolveCourse } from "@/lib/course";
 import { AcademyCourseCard } from "@/components/courses/academy-course-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InlineError } from "@/components/inline-error";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { SectionHeader } from "./section-header";
 
@@ -28,6 +29,7 @@ type Filter = (typeof FILTERS)[number];
 // exact same React-Query-cached hooks the /courses page uses, so this
 // section is a second read of one cached fetch, not a second network call.
 export function CourseCatalogSection() {
+  const router = useRouter();
   const userId = useAuthStore((s) => s.user?.id);
   const { courses, coursesLoading, error, refetch } = useCourses();
   const { enrollments } = useEnrollments(userId);
@@ -63,7 +65,7 @@ export function CourseCatalogSection() {
             type="button"
             onClick={() => setFilter(f)}
             className={cn(
-              "shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors",
+              "shrink-0 rounded-full px-4 py-1.5 text-body-sm font-semibold transition-colors duration-fast ease-standard",
               filter === f ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground hover:bg-secondary/60"
             )}
           >
@@ -75,19 +77,17 @@ export function CourseCatalogSection() {
       {coursesLoading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-[4/5] w-full rounded-2xl" />
+            <Skeleton key={i} className="aspect-[4/5] w-full rounded-md" />
           ))}
         </div>
       ) : error ? (
         <InlineError message="Couldn't load courses." onRetry={() => refetch()} />
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-12 text-center">
-          <GraduationCap className="mb-3 size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">No courses found for this filter.</p>
-          <Link href="/courses" className="mt-2 text-sm font-medium text-primary hover:underline">
-            Browse all courses
-          </Link>
-        </div>
+        <EmptyState
+          icon={GraduationCap}
+          title="No courses found for this filter"
+          action={{ label: "Browse all courses", onClick: () => router.push("/courses") }}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((course) => (

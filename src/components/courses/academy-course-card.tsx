@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Star, School, ChevronRight, CheckCircle2 } from "lucide-react";
-import { getCourseId, courseProgramGradientClasses } from "@/lib/course";
+import { Star, School, CheckCircle2 } from "lucide-react";
+import { getCourseId, courseProgramSurfaceClasses } from "@/lib/course";
 import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { Course } from "@/types/course";
 
 // Ported from mobile's Home/Components/AllCourses.tsx CourseCard — same
@@ -23,7 +24,7 @@ export function AcademyCourseCard({ course, enrolled }: { course: Course; enroll
   return (
     <Link
       href={`/courses/${id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-shadow hover:shadow-lg"
+      className="group flex flex-col overflow-hidden rounded-md border border-border bg-card shadow-1 transition-[transform,box-shadow] duration-fast ease-standard hover:-translate-y-0.5 hover:shadow-2"
     >
       <div className="relative w-full" style={{ aspectRatio: "1280 / 630" }}>
         {course.thumbnail ? (
@@ -31,34 +32,34 @@ export function AcademyCourseCard({ course, enrolled }: { course: Course; enroll
           <img
             src={course.thumbnail}
             alt={course.title}
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-base ease-standard group-hover:scale-[1.02]"
           />
         ) : (
           <div
             className={cn(
-              "flex h-full w-full items-center justify-center bg-gradient-to-br px-4 text-center",
-              courseProgramGradientClasses(course.program)
+              "flex h-full w-full items-center justify-center px-4 text-center",
+              courseProgramSurfaceClasses(course.program)
             )}
           >
             <div>
-              <p className="text-xl font-extrabold tracking-tight text-white">{course.title}</p>
-              <p className="mt-1 text-base font-bold text-white/90">{course.program}</p>
+              <p className="text-title text-white">{course.title}</p>
+              <p className="mt-1 text-body-sm text-white/85">{course.program}</p>
             </div>
           </div>
         )}
       </div>
 
       <div className="flex flex-1 flex-col p-4">
-        <p className="mb-2 text-xs font-semibold text-orange-500">{course.program}</p>
+        <p className="mb-2 text-eyebrow text-warning-500">{course.program}</p>
 
-        <h3 className="mb-2 line-clamp-2 text-base font-bold text-foreground">{course.title}</h3>
+        <h3 className="mb-2 line-clamp-2 text-title text-foreground">{course.title}</h3>
 
-        <div className="mb-2 flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Star className="size-4 fill-amber-400 text-amber-400" />
+        <div className="mb-2 flex items-center gap-1.5 text-body-sm text-muted-foreground">
+          <Star className="size-4 fill-gold-400 text-gold-400" />
           {rating.toFixed(1)}
         </div>
 
-        <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="mb-3 flex items-center gap-2 text-body-sm text-muted-foreground">
           <School className="size-4" />
           <span>{course.status}</span>
           {course.subjects && course.subjects.length > 0 && (
@@ -73,33 +74,28 @@ export function AcademyCourseCard({ course, enrolled }: { course: Course; enroll
 
         <div className="mt-auto flex items-center justify-between gap-2">
           {isFree ? (
-            <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-700">FREE</span>
+            <StatusBadge tone="free">FREE</StatusBadge>
           ) : (
-            <span className="text-2xl font-bold text-foreground">Rs. {course.price}</span>
+            <span className="shrink-0 text-title text-foreground">Rs. {course.price}</span>
           )}
 
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "flex min-w-24 items-center justify-center gap-1 rounded-xl px-4 py-2.5 text-sm font-semibold",
-                enrolled ? "bg-green-100 text-green-700" : "bg-foreground text-background"
-              )}
-            >
-              {enrolled ? (
-                <>
-                  <CheckCircle2 className="size-4" />
-                  Enrolled
-                </>
-              ) : isFree ? (
-                "Start"
-              ) : (
-                "Enroll Now"
-              )}
-            </span>
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border">
-              <ChevronRight className="size-4 text-foreground/70" />
-            </span>
-          </div>
+          <span
+            className={cn(
+              "flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-sm px-4 py-2.5 text-body-sm font-semibold",
+              enrolled ? "bg-success-100 text-success-700" : "bg-foreground text-background"
+            )}
+          >
+            {enrolled ? (
+              <>
+                <CheckCircle2 className="size-4" />
+                Enrolled
+              </>
+            ) : isFree ? (
+              "Start"
+            ) : (
+              "Enroll Now"
+            )}
+          </span>
         </div>
       </div>
     </Link>

@@ -1,8 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Sparkles, Send, Plus, Trash2, History, Menu } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronLeft, Sparkles, Send, Plus, Trash2, History, Menu } from "lucide-react";
 import { useCourses } from "@/hooks/queries/useCourses";
 import { chatWithAI, deleteChatHistory, getChatHistoryDetail, getChatHistoryList, saveChatHistory } from "@/api/student/ai";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +28,7 @@ function newChatId(): string {
 }
 
 function AIChatContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { courses } = useCourses();
 
@@ -223,6 +224,15 @@ function AIChatContent() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-2 border-b border-border bg-card px-4 py-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-muted-foreground"
+            onClick={() => router.back()}
+            aria-label="Back"
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen((v) => !v)}>
             <Menu className="size-4" />
           </Button>

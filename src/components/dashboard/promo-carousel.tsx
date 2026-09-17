@@ -51,8 +51,14 @@ export function PromoCarousel() {
     return () => clearInterval(interval);
   }, [api, banners.length]);
 
+  // Capped at 960px (docs/DESIGN-STANDARDS.md §12 fix-pass note) — the
+  // correct 1280:630 aspect ratio at the full ~1280px content-container
+  // width would stand ~630px tall, dominating the page as a hero rather
+  // than reading as a banner. 960px keeps it prominent (~472px tall) while
+  // staying clearly subordinate to the rest of the page on large screens;
+  // below that it's still full-width, unchanged from before.
   if (isLoading) {
-    return <Skeleton className="aspect-[1280/420] w-full rounded-xl" />;
+    return <Skeleton className="aspect-[1280/630] w-full max-w-[960px] rounded-xl" />;
   }
 
   if (isError || banners.length === 0) {
@@ -61,7 +67,7 @@ export function PromoCarousel() {
 
   return (
     <div
-      className="relative"
+      className="relative w-full max-w-[960px]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -69,7 +75,7 @@ export function PromoCarousel() {
         <CarouselContent>
           {banners.map((banner) => (
             <CarouselItem key={banner._id || banner.id}>
-              <div className="relative aspect-[1280/420] w-full overflow-hidden rounded-xl bg-secondary/40">
+              <div className="relative aspect-[1280/630] w-full overflow-hidden rounded-xl bg-secondary">
                 {/* Banner images can come from any admin-configured host, so this
                     intentionally skips next/image's domain allowlist. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -78,15 +84,19 @@ export function PromoCarousel() {
                   alt={banner.title}
                   className="absolute inset-0 h-full w-full object-cover"
                 />
-                <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/10 to-transparent p-4">
+                {/* Text scrim over imagery — one of the §5.1 allow-listed
+                    glass spots, but a plain gradient already gives the
+                    caption enough contrast here without adding a blur layer
+                    on top of a busy, frequently-changing photo. */}
+                <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-neutral-950/75 via-neutral-950/15 to-transparent p-4">
                   {banner.badge && (
-                    <span className="mb-1 w-fit rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+                    <span className="mb-1 w-fit rounded-full bg-primary px-2.5 py-1 text-eyebrow text-primary-foreground">
                       {banner.badge}
                     </span>
                   )}
-                  <p className="text-sm font-bold text-white sm:text-base">{banner.title}</p>
+                  <p className="text-title text-white sm:text-h3">{banner.title}</p>
                   {banner.subtitle && (
-                    <p className="text-xs text-white/80 sm:text-sm">{banner.subtitle}</p>
+                    <p className="text-body-sm text-white/80">{banner.subtitle}</p>
                   )}
                 </div>
               </div>
@@ -109,7 +119,7 @@ export function PromoCarousel() {
               aria-label={`Go to slide ${i + 1}`}
               onClick={() => api?.scrollTo(i)}
               className={cn(
-                "h-1.5 rounded-full transition-all",
+                "h-1.5 rounded-full transition-[width,background-color] duration-fast ease-standard",
                 i === selectedIndex ? "w-5 bg-primary" : "w-1.5 bg-border hover:bg-muted-foreground/40"
               )}
             />

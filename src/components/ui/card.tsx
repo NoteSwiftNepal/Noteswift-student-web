@@ -9,7 +9,13 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-xl border border-border/60 bg-card/70 text-card-foreground backdrop-blur supports-[backdrop-filter]:bg-card/60 transition-colors duration-200 hover:border-border",
+      // Opaque by default (§5.2 deny-list: cards in a grid/list are never
+      // glass) — resting elevation is shadow-1, radius-md is the card
+      // default (§2.4/§2.5/§6.4). Hover lift only applies where a call site
+      // opts in via its own onClick/Link wrapper, not globally here. The
+      // dark:border-t hairline fakes a light-catching top edge on a raised
+      // dark surface (§2.5) — a plain flat dark rectangle otherwise.
+      "rounded-md border border-border bg-card text-card-foreground shadow-1 dark:border-t-white/[0.06]",
       className
     )}
     {...props}
@@ -35,10 +41,7 @@ const CardTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn(
-      "text-2xl font-semibold leading-tight tracking-tight",
-      className
-    )}
+    className={cn("text-h3 text-card-foreground", className)}
     {...props}
   />
 ))
@@ -50,7 +53,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-body-sm text-muted-foreground", className)}
     {...props}
   />
 ))

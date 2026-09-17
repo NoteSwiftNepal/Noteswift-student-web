@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
+  ChevronLeft,
   Clock,
   Brain,
   EyeOff,
@@ -11,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -116,6 +119,7 @@ const STUDY_TIPS: StudyTip[] = [
 ];
 
 export default function StudyTipsPage() {
+  const router = useRouter();
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(STUDY_TIPS.map((t) => t.category)))],
     []
@@ -127,9 +131,20 @@ export default function StudyTipsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Study Tips</h1>
-        <p className="text-sm text-muted-foreground">Proven techniques to study smarter.</p>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 text-muted-foreground"
+          onClick={() => router.back()}
+          aria-label="Back"
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Study Tips</h1>
+          <p className="text-sm text-muted-foreground">Proven techniques to study smarter.</p>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">

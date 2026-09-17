@@ -23,17 +23,30 @@ import { cn } from "@/lib/utils";
 // otherwise collapsing the sidebar would leave a stale gap/overlap.
 export function AppShell({ children }: { children: ReactNode }) {
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
+  const sidebarWidth = useUIStore((s) => s.sidebarWidth);
+  const dragging = useUIStore((s) => s.sidebarDragging);
+  const railWidth = collapsed ? "64px" : `${sidebarWidth}px`;
 
   return (
     <div className="min-h-screen">
       <SidebarNav />
-      <div className={cn("flex min-h-screen flex-col transition-[padding] duration-200", collapsed ? "lg:pl-16" : "lg:pl-64")}>
+      <div
+        style={{ ["--sidebar-w" as string]: railWidth }}
+        className={cn(
+          "flex min-h-screen flex-col lg:pl-[var(--sidebar-w)]",
+          !dragging && "transition-[padding] duration-base ease-standard"
+        )}
+      >
         <MobileNav />
         <div className="hidden items-center justify-end gap-2 border-b border-border px-8 py-3 lg:flex">
           <NotificationBell />
           <UserAvatarLink />
         </div>
-        <main className="w-full flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        {/* Content container (§3) — content stretched full-bleed on
+            ultra-wide monitors before this. 1280px is the default cap; the
+            test-attempt and live-class room screens opt into 1440px on
+            their own page (wider working surfaces), not here. */}
+        <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

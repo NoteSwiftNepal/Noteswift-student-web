@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { API_BASE_URL } from "@/api/axios";
-import type { ChatMessage, JoinClassroomAck, RaisedHand, SendMessageAck } from "@/types/live-class";
+import type { ChatMessage, JoinClassroomAck, RaisedHand, SendMessageAck, SyncMessagesAck } from "@/types/live-class";
+import { latestConfirmedMessageId, mergeIncomingMessage, mergeSyncedMessages } from "@/lib/liveClassChat";
 
 export type EditMessageAck =
   | { ok: true; message: ChatMessage }
@@ -17,6 +18,25 @@ export type DeleteMessageAck = { ok: true; messageId: string } | { ok: false; re
 // input (closing the tab, switching apps, etc.), matching the standard
 // chat-app UX for this event rather than a backend requirement.
 const TYPING_STOP_DELAY_MS = 3000;
+
+const ACK_TIMEOUT_MS = 8000;
+
+function emitWithAck<T = unknown>(socket: Socket, event: string, payload: unknown, timeoutMs = ACK_TIMEOUT_MS): Promise<T | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve(null);
+    }, timeoutMs);
+    socket.emit(event, payload, (ack: T) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(ack);
+    });
+  });
+}
 
 export type ChatConnectionState = "connecting" | "joining" | "connected" | "disconnected" | "failed";
 
@@ -53,6 +73,15 @@ export function useLiveClassSocket(
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
 
+  // Read from inside the socket effect (which only re-runs when classroomId/
+  // accessToken change) to always see the LATEST messages at join/reconnect
+  // time for the sync-messages cursor below, not whatever they were when the
+  // effect first ran.
+  const messagesRef = useRef<ChatMessage[]>(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   useEffect(() => {
     if (!classroomId || !accessToken) return;
 
@@ -67,17 +96,34 @@ export function useLiveClassSocket(
     socketRef.current = socket;
     setConnectionState("connecting");
 
-    const performJoin = () => {
+    // The reconnect-recovery sequence mobile's LiveClassOverlay.tsx and the
+    // teacher web app's LiveRoomContext.tsx both run on every 'connect':
+    // join-classroom (ack) -> sync-messages (delta since the latest message
+    // this client already has). 'previous-messages' (below) only arrives
+    // once, as part of THIS join-classroom call, so without also calling
+    // sync-messages here, any reconnect after the first one (socket.io-client
+    // auto-reconnecting after a transient drop, without the page itself
+    // unmounting/remounting) had no way to catch up on messages broadcast
+    // while disconnected — they'd only ever surface via a full page
+    // navigation away and back, which forces a brand new join and a fresh
+    // 'previous-messages' snapshot.
+    const performJoin = async () => {
       setConnectionState("joining");
-      socket.emit("join-classroom", { classroomId }, (ack: JoinClassroomAck) => {
-        if (ack?.ok) {
-          setJoinError(null);
-          setConnectionState("connected");
-        } else {
-          setJoinError(ack?.reason ?? "join_failed");
-          setConnectionState("failed");
-        }
-      });
+      const joinAck = await emitWithAck<JoinClassroomAck>(socket, "join-classroom", { classroomId });
+      if (!joinAck || !joinAck.ok) {
+        setJoinError(joinAck?.ok === false ? joinAck.reason : "join_failed");
+        setConnectionState("failed");
+        return;
+      }
+      setJoinError(null);
+      setConnectionState("connected");
+
+      const sinceId = latestConfirmedMessageId(messagesRef.current);
+      if (!sinceId) return; // cold start — 'previous-messages' below already covers it
+      const syncAck = await emitWithAck<SyncMessagesAck>(socket, "sync-messages", { classroomId, sinceId });
+      if (syncAck?.ok) {
+        setMessages((prev) => mergeSyncedMessages(prev, syncAck.messages, syncAck.deletedMessageIds));
+      }
     };
 
     // Fires on the initial connection AND every automatic reconnection —
@@ -93,9 +139,16 @@ export function useLiveClassSocket(
       setConnectionState("disconnected");
     });
 
-    socket.on("previous-messages", (msgs: ChatMessage[]) => setMessages(msgs));
+    // Merge, not replace — this fires on every successful join, including
+    // reconnect-triggered rejoins, and a destructive replace could race with
+    // (and wipe) a sync-messages merge from the same performJoin call, or
+    // drop a message that arrived via a live receive-message in the gap
+    // between join-classroom's ack and this event.
+    socket.on("previous-messages", (msgs: ChatMessage[]) =>
+      setMessages((prev) => mergeSyncedMessages(prev, msgs || []))
+    );
     socket.on("receive-message", (msg: ChatMessage) =>
-      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]))
+      setMessages((prev) => mergeIncomingMessage(prev, msg))
     );
     // message-edited/message-deleted broadcast to every participant
     // (backend's io.to(meetingId).emit(...)) — applies here regardless of

@@ -19,6 +19,15 @@ import {
 } from "@/lib/directChat";
 import type { ConversationSummary, DirectAttachment, DirectChatMessage, ServerDirectMessage } from "@/types/direct-chat";
 
+// A stable reference for "no messages yet" — messagesFor is called directly
+// from render (`useDirectChatStore((s) => s.messagesFor(...))`), so it must
+// return the SAME array instance across calls when the underlying state
+// hasn't changed. Returning a fresh `[]` literal every call gives React's
+// external-store subscription a new reference on every render, which
+// trips "getSnapshot should be cached" and then a real infinite
+// re-render loop (confirmed root cause, not a theoretical concern).
+const EMPTY_MESSAGES: DirectChatMessage[] = [];
+
 // Deliberately NOT persisted (no zustand `persist`/localStorage) — unlike
 // mobile's AsyncStorage-backed store, which persists its outbox so a queued
 // send survives an app restart. This app has no outbox to persist in the
@@ -73,7 +82,8 @@ export const useDirectChatStore = create<DirectChatState>()((set, get) => ({
 
   setConversations: (conversations) => set({ conversations: sortConversationsByRecency(conversations) }),
 
-  messagesFor: (teacherId, subjectName) => get().messagesByConversation[conversationKey(teacherId, subjectName)] || [],
+  messagesFor: (teacherId, subjectName) =>
+    get().messagesByConversation[conversationKey(teacherId, subjectName)] || EMPTY_MESSAGES,
   setMessagesFor: (teacherId, subjectName, messages) =>
     set((s) => ({ messagesByConversation: { ...s.messagesByConversation, [conversationKey(teacherId, subjectName)]: messages } })),
 

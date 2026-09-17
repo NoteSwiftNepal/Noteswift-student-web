@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CreditCard, Crown, Package, Settings } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, CreditCard, Crown, Package, Settings } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useEnrollments } from "@/hooks/queries/useEnrollments";
 import { resolveCourse } from "@/lib/course";
@@ -31,6 +32,7 @@ const SECTIONS: { key: Section; label: string; icon: typeof Package }[] = [
 // than fabricated transactions; Account Settings links to the real
 // /settings page instead of duplicating its unpersisted mobile toggles.
 export default function ProDashboardPage() {
+  const router = useRouter();
   const [section, setSection] = useState<Section>("packages");
   const userId = useAuthStore((s) => s.user?.id);
   const { enrollments, enrollmentsLoading, error, refetch } = useEnrollments(userId);
@@ -60,7 +62,16 @@ export default function ProDashboardPage() {
 
       <div className="min-w-0 space-y-4">
         <div className="flex items-center gap-2">
-          <Crown className="size-5 text-purple-600" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-muted-foreground"
+            onClick={() => router.back()}
+            aria-label="Back"
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <Crown className="size-5 text-gold-600" />
           <h1 className="text-2xl font-bold text-foreground">Pro Dashboard</h1>
         </div>
 

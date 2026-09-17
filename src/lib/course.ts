@@ -29,24 +29,27 @@ export function courseTypeBadgeClasses(type: Course["type"]): string {
   }
 }
 
-// Program-gradient thumbnail fallback (mobile's Home/Components/AllCourses.tsx
-// getGradientColors) — ported as the closest stock Tailwind equivalents
-// rather than mobile's raw hex, per blueprint §6's "route through existing
-// theme tokens" rule. Two of mobile's four pairs are Tailwind's own colors
-// verbatim (green-200→green-500 for Bachelor, indigo-200→indigo-500 for
-// CTEVT); the other two (SEE's orange, +2's blue) are close-but-not-exact
-// custom hex on mobile, mapped to the nearest stock pair here.
-export function courseProgramGradientClasses(program: string | undefined): string {
+// Program-identity thumbnail-fallback surface (mobile's Home/Components/
+// AllCourses.tsx getGradientColors) — previously a parallel bare-Tailwind
+// gradient map (from-orange-200 to-orange-500 etc, docs/DESIGN-STANDARDS.md
+// §2.1 flags this as exactly the "bare palette class" pattern the token
+// system replaces). Now a fixed pairing onto the app's own semantic tokens,
+// the same fixed-assignment mechanism StatusBadge uses for its tones — one
+// flat, solid-tinted fill per program (not a gradient: none of
+// brand/success/warning/accent has a second ramp stop defined that would
+// make a two-stop gradient worth the extra complexity) instead of a
+// separate color system.
+export function courseProgramSurfaceClasses(program: string | undefined): string {
   switch (program) {
     case "SEE":
-      return "from-orange-200 to-orange-500";
+      return "bg-warning-500";
     case "+2":
-      return "from-sky-200 to-cyan-600";
+      return "bg-primary";
     case "Bachelor":
-      return "from-green-200 to-green-500";
+      return "bg-success-500";
     case "CTEVT":
-      return "from-indigo-200 to-indigo-500";
+      return "bg-accent";
     default:
-      return "from-gray-200 to-gray-400";
+      return "bg-neutral-400";
   }
 }

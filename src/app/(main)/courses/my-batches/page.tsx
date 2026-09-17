@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap, CalendarDays } from "lucide-react";
+import { ChevronLeft, GraduationCap, CalendarDays } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useSelectedCourse } from "@/hooks/useSelectedCourse";
 import { resolveCourse, getCourseId } from "@/lib/course";
@@ -87,9 +87,20 @@ export default function MyBatchesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">My Batches</h1>
-        <p className="text-sm text-muted-foreground">Every course you&apos;re enrolled in — pick one to start studying.</p>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 text-muted-foreground"
+          onClick={() => router.back()}
+          aria-label="Back"
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">My Batches</h1>
+          <p className="text-sm text-muted-foreground">Every course you&apos;re enrolled in — pick one to start studying.</p>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

@@ -2,6 +2,7 @@ import api from "@/api/axios";
 import type { LegacyApiResponse } from "@/types/api";
 import type { CourseEnrollment } from "@/types/course";
 import type { LiveClass, LiveClassTokenResult } from "@/types/live-class";
+import type { ListModuleCommentsResult, ModuleComment, ToggleModuleLikeResult } from "@/types/module-comment";
 
 export const redeemUnlockCode = async (
   code: string,
@@ -95,5 +96,59 @@ export const leaveLiveClass = async (
   roomId: string
 ): Promise<{ success: boolean; message: string }> => {
   const res = await api.post(`/learn/live-classes/${roomId}/leave`);
+  return res.data;
+};
+
+// ─── Module like/comments (video-detail page) ──────────────────────────────
+// Shapes confirmed directly against commentController.ts and
+// courseContentController.ts's toggleModuleLike — mobile's real per-video
+// screen (ChapterDetailCard.tsx) calls the exact same three endpoints.
+
+// toggleModuleLike reads courseSubjectId from the query string even though
+// this is a POST (confirmed against the controller — not a mistake to
+// "fix" by moving it to the body, the backend genuinely only reads req.query
+// here).
+export const toggleModuleLike = async (
+  courseId: string,
+  subjectName: string,
+  moduleNumber: number,
+  courseSubjectId: string
+): Promise<LegacyApiResponse<ToggleModuleLikeResult>> => {
+  const res = await api.post(
+    `/courses/${courseId}/subject/${encodeURIComponent(subjectName)}/module/${moduleNumber}/like`,
+    undefined,
+    { params: { courseSubjectId } }
+  );
+  return res.data;
+};
+
+// videoId is the video subdocument's own Mongoose _id (ModuleVideo._id) —
+// required by the backend (400 without it), not the array index.
+export const getModuleComments = async (
+  courseId: string,
+  subjectName: string,
+  moduleNumber: number,
+  videoId: string,
+  courseSubjectId: string
+): Promise<LegacyApiResponse<ListModuleCommentsResult>> => {
+  const res = await api.get(
+    `/courses/${courseId}/subject/${encodeURIComponent(subjectName)}/module/${moduleNumber}/comments`,
+    { params: { videoId, courseSubjectId } }
+  );
+  return res.data;
+};
+
+export const postModuleComment = async (
+  courseId: string,
+  subjectName: string,
+  moduleNumber: number,
+  videoId: string,
+  courseSubjectId: string,
+  text: string
+): Promise<LegacyApiResponse<{ comment: ModuleComment }>> => {
+  const res = await api.post(
+    `/courses/${courseId}/subject/${encodeURIComponent(subjectName)}/module/${moduleNumber}/comments`,
+    { videoId, courseSubjectId, text }
+  );
   return res.data;
 };

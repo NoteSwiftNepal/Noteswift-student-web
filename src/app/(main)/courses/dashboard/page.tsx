@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { School, ClipboardCheck, TrendingUp, Radio, Clock, Timer, HelpCircle, Layers, History, Download, ClipboardList, Bookmark, Rocket, PlayCircle, FileText, CheckCircle2, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, School, ClipboardCheck, TrendingUp, Radio, Clock, Timer, HelpCircle, Layers, History, Download, ClipboardList, Bookmark, Rocket, PlayCircle, FileText, CheckCircle2, Users } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useSelectedCourse } from "@/hooks/useSelectedCourse";
 import { useDashboard } from "@/hooks/queries/useDashboard";
@@ -63,6 +64,7 @@ function relativeTime(iso: string): string {
 // MOBILE_APP_CODE_ISSUES.md). Scoped to whatever course useSelectedCourse
 // resolves, same as mobile scopes this screen to courseStore.selectedCourse.
 export default function CourseDashboardPage() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { selectedCourse, enrollments } = useSelectedCourse();
   const courseId = selectedCourse ? getCourseId(selectedCourse) : undefined;
@@ -77,6 +79,16 @@ export default function CourseDashboardPage() {
 
   return (
     <div className="space-y-6">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-muted-foreground"
+        onClick={() => router.back()}
+        aria-label="Back"
+      >
+        <ChevronLeft className="size-4" />
+      </Button>
+
       <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#1E3A5F] to-primary p-6 text-primary-foreground">
         <p className="text-sm text-primary-foreground/80">
           {greeting.emoji} {greeting.text}

@@ -252,3 +252,16 @@ export function markConversationRead(list: ConversationSummary[], teacherId: str
   const key = conversationKey(teacherId, subjectName);
   return list.map((c) => (conversationKey(c.teacherId, c.subjectName) === key ? { ...c, unreadCount: 0 } : c));
 }
+
+// Ported verbatim from mobile's lib/directChat.ts — shared by both the
+// conversation-list rows and the thread header (via components/ask/
+// teacher-avatar.tsx) so they always agree on the same photo-vs-initial
+// fallback rule.
+export type TeacherAvatarSource = { kind: "photo"; url: string } | { kind: "initial"; letter: string };
+
+export function getTeacherAvatarSource(teacherName: string | null | undefined, photoUrl?: string | null): TeacherAvatarSource {
+  if (photoUrl && photoUrl.trim()) {
+    return { kind: "photo", url: photoUrl };
+  }
+  return { kind: "initial", letter: (teacherName || "T").charAt(0).toUpperCase() };
+}

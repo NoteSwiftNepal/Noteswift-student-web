@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, CheckCircle2, Clock, MessageSquare } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Plus, Search, CheckCircle2, Clock, MessageSquare } from "lucide-react";
 import { useQuestions } from "@/hooks/queries/useQuestions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ function statusBadge(status: QuestionSummary["status"]) {
 }
 
 export default function MyDoubtsPage() {
+  const router = useRouter();
   // Unscoped (every course) — mirrors mobile's AllQuestions.tsx/MyDoubts,
   // which is the same underlying "my questions" data as this page (there is
   // no separate "browse other students' public questions" endpoint on the
@@ -61,9 +63,20 @@ export default function MyDoubtsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">My Doubts</h1>
-          <p className="text-sm text-muted-foreground">Every question you've asked, across all courses.</p>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-muted-foreground"
+            onClick={() => router.back()}
+            aria-label="Back"
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">My Doubts</h1>
+            <p className="text-sm text-muted-foreground">Every question you've asked, across all courses.</p>
+          </div>
         </div>
         <Button asChild>
           <Link href="/ask/doubt">

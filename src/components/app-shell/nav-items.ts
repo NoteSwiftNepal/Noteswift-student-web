@@ -15,6 +15,7 @@ import {
   Bell,
   Settings,
   UserRound,
+  Users,
   LifeBuoy,
 } from "lucide-react";
 
@@ -43,6 +44,7 @@ export const moreNavItems: NavItem[] = [
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Profile", href: "/profile", icon: UserRound },
+  { label: "Parent Link", href: "/parent-link", icon: Users },
   { label: "Support", href: "/support", icon: LifeBuoy },
 ];
 

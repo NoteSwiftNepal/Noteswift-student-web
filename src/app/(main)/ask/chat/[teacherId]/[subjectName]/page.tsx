@@ -3,10 +3,11 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ExternalLink, FileText, ImagePlus, Paperclip, RotateCw, Send, WifiOff } from "lucide-react";
-import { useAuthStore } from "@/stores/authStore";
-import { useDirectChatSocket, validateChatDocumentPick, validateChatImagePick } from "@/hooks/useDirectChatSocket";
+import { validateChatDocumentPick, validateChatImagePick } from "@/hooks/useDirectChatSocket";
+import { useDirectChatSocketContext } from "@/components/ask/direct-chat-socket-context";
 import { useDirectChatStore } from "@/stores/directChatStore";
 import { toast } from "@/hooks/use-toast";
+import { TeacherAvatar } from "@/components/ask/teacher-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -94,13 +95,25 @@ function ChatThreadContent() {
   const params = useParams<{ teacherId: string; subjectName: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
-  const accessToken = useAuthStore((s) => s.accessToken);
   const subjectName = decodeURIComponent(params.subjectName);
   const teacherId = params.teacherId;
-  const courseId = searchParams.get("courseId") || "";
-  const teacherName = searchParams.get("teacherName") || "Teacher";
-  const courseName = searchParams.get("courseName") || "";
+
+  // Query params (set by the conversation-row Link / new-conversation
+  // picker) are the primary source — they're already correct at the moment
+  // of navigation, with no dependency on the conversation list having
+  // loaded yet. The matching conversation-list entry (already in the store
+  // once loaded, via the layout's one socket connection) is a fallback for
+  // a hard refresh or a bookmarked thread URL, where the query params are
+  // gone but the conversation itself — if it already exists — isn't. A
+  // genuinely brand-new conversation (started seconds ago, no messages yet)
+  // has neither, and still falls back to "Teacher"/no photo, same as before.
+  const matchedConversation = useDirectChatStore((s) =>
+    s.conversations.find((c) => c.teacherId === teacherId && c.subjectName === subjectName)
+  );
+  const courseId = searchParams.get("courseId") || matchedConversation?.courseId || "";
+  const teacherName = searchParams.get("teacherName") || matchedConversation?.teacherName || "Teacher";
+  const courseName = searchParams.get("courseName") || matchedConversation?.courseName || "";
+  const teacherPhoto = searchParams.get("teacherPhoto") || matchedConversation?.teacherPhoto || null;
 
   const [draft, setDraft] = useState("");
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -109,6 +122,9 @@ function ChatThreadContent() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
 
+  // Shared connection from ask/chat/layout.tsx — this page no longer opens
+  // its own socket (see direct-chat-socket-context.tsx for why that used to
+  // mean a fresh reconnect on every list<->thread navigation).
   const {
     connectionState,
     joinConversation,
@@ -119,7 +135,7 @@ function ChatThreadContent() {
     sendDocument,
     retryFailedUpload,
     markRead,
-  } = useDirectChatSocket(user?.id, accessToken);
+  } = useDirectChatSocketContext();
 
   const messages = useDirectChatStore((s) => s.messagesFor(teacherId, subjectName));
   const hasMoreHistory = useDirectChatStore((s) => s.hasMoreHistoryFor(teacherId, subjectName));
@@ -211,14 +227,22 @@ function ChatThreadContent() {
   };
 
   return (
-    <div className="-mx-4 -my-6 flex h-[calc(100vh-4rem)] flex-col sm:-mx-6 lg:-mx-8">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-3 border-b border-border bg-card px-4 py-3">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        {/* Only meaningful below lg — the conversation list is always
+            visible beside this pane at lg+, so "back" would be redundant
+            there. Goes explicitly to /ask/chat (closing this thread), not
+            router.back(), since browser history could point anywhere. */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 text-muted-foreground lg:hidden"
+          onClick={() => router.push("/ask/chat")}
+          aria-label="Back to conversations"
+        >
           <ChevronLeft className="size-4" />
         </Button>
-        <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-          {teacherName.charAt(0).toUpperCase()}
-        </div>
+        <TeacherAvatar name={teacherName} photoUrl={teacherPhoto} size={36} />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">{teacherName}</p>
           <p className="truncate text-xs text-muted-foreground">

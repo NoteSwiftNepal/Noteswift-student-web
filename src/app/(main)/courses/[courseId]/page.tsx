@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { BookOpen, CheckCircle2, Clock, Star } from "lucide-react";
+import { BookOpen, CheckCircle2, ChevronLeft, Clock, Star } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useCourses } from "@/hooks/queries/useCourses";
 import { useEnrollments, useTrials, useInvalidateCourseAccess } from "@/hooks/queries/useEnrollments";
@@ -144,7 +144,18 @@ export default function CourseDetailPage() {
   const id = getCourseId(course);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+    <div className="space-y-4">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-muted-foreground"
+        onClick={() => router.back()}
+        aria-label="Back"
+      >
+        <ChevronLeft className="size-4" />
+      </Button>
+
+      <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
       <div className="space-y-6">
         <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-secondary/40">
           {course.thumbnail ? (
@@ -317,6 +328,7 @@ export default function CourseDetailPage() {
           </Card>
         )}
       </aside>
+      </div>
     </div>
   );
 }

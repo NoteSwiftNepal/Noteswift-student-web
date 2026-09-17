@@ -2,11 +2,13 @@
 
 import { Phone, School, GraduationCap, MapPin, Mail } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
+import { useSelectedCourse } from "@/hooks/useSelectedCourse";
+import { getCourseId } from "@/lib/course";
 import { AvatarEditor } from "@/components/profile/avatar-editor";
 import { EditFieldDialog } from "@/components/profile/edit-field-dialog";
 import { EmailChangeDialog } from "@/components/profile/email-change-dialog";
-import { ParentLinkCard } from "@/components/profile/parent-link-card";
 import { CurrentlyLearningCard } from "@/components/profile/currently-learning-card";
+import { ProfileStats } from "@/components/profile/profile-stats";
 import { Card, CardContent } from "@/components/ui/card";
 
 function InfoRow({
@@ -36,6 +38,9 @@ function InfoRow({
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
+  const { selectedCourse } = useSelectedCourse();
+  const courseId = selectedCourse ? getCourseId(selectedCourse) : undefined;
+  const streak = user?.currentStreak ?? 0;
 
   const address = user?.address;
   const locationValue = address
@@ -49,11 +54,21 @@ export default function ProfilePage() {
         <AvatarEditor />
         <div className="text-center">
           <h1 className="text-xl font-bold text-foreground">{user?.full_name || "Student"}</h1>
-          {typeof user?.currentStreak === "number" && (
-            <p className="text-sm text-muted-foreground">{user.currentStreak} day streak</p>
-          )}
+        </div>
+        {/* Real stat cards (streak tier-colored flame + per-course rank),
+            not a bare text line — mirrors mobile's actual ProfileHeader.tsx,
+            reusing the exact same StatTile/useCourseRank pieces the
+            Dashboard's stats-overview.tsx already built rather than a third
+            implementation. w-full since the parent's items-center would
+            otherwise shrink the 2-column grid to its content's width. */}
+        <div className="w-full max-w-xs">
+          <ProfileStats streak={streak} studentId={user?.id} courseId={courseId} />
         </div>
       </div>
+
+      {/* First thing after identity — not buried near the bottom of the
+          page behind cards a student has to scroll past to reach. */}
+      <CurrentlyLearningCard />
 
       <Card>
         <CardContent className="divide-y divide-border p-4">
@@ -70,10 +85,6 @@ export default function ProfilePage() {
           <InfoRow icon={MapPin} label="Address & Location" value={locationValue} editor={<EditFieldDialog kind="location" />} />
         </CardContent>
       </Card>
-
-      <CurrentlyLearningCard />
-
-      <ParentLinkCard />
     </div>
   );
 }

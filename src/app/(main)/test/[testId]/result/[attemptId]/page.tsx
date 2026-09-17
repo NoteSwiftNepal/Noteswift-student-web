@@ -1,17 +1,19 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, XCircle, Hourglass } from "lucide-react";
+import { CheckCircle2, ChevronLeft, XCircle, Hourglass } from "lucide-react";
 import { getTestResults } from "@/api/student/test";
 import { LatexText } from "@/components/latex-preview";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoutePlaceholder } from "@/components/route-placeholder";
 
 export default function TestResultPage() {
   const params = useParams<{ testId: string; attemptId: string }>();
+  const router = useRouter();
 
   const { data, isPending } = useQuery({
     queryKey: ["test-results", params.testId, params.attemptId],
@@ -35,15 +37,26 @@ export default function TestResultPage() {
     // — the teacher hasn't graded a subjective test, or showResultsImmediately
     // is off — not a fetch failure.
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center gap-2 p-10 text-center">
-          <Hourglass className="size-10 text-muted-foreground" />
-          <p className="text-sm font-semibold text-foreground">Results not available yet</p>
-          <p className="text-sm text-muted-foreground">
-            {data?.message ?? "Check back once your test has been graded."}
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground"
+          onClick={() => router.back()}
+          aria-label="Back"
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        <Card>
+          <CardContent className="flex flex-col items-center gap-2 p-10 text-center">
+            <Hourglass className="size-10 text-muted-foreground" />
+            <p className="text-sm font-semibold text-foreground">Results not available yet</p>
+            <p className="text-sm text-muted-foreground">
+              {data?.message ?? "Check back once your test has been graded."}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -51,9 +64,20 @@ export default function TestResultPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{test.title}</h1>
-        <p className="text-sm text-muted-foreground">Attempt {attempt.attemptNumber}</p>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 text-muted-foreground"
+          onClick={() => router.back()}
+          aria-label="Back"
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{test.title}</h1>
+          <p className="text-sm text-muted-foreground">Attempt {attempt.attemptNumber}</p>
+        </div>
       </div>
 
       <Card>

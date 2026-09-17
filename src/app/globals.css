@@ -3,98 +3,231 @@
 @tailwind utilities;
 
 /*
- * NoteSwift design tokens (blueprint §6, corrected). The mobile app is
- * light-themed with a blue (#3B82F6) primary — the original dark/purple
- * palette here was read off dead, unused config (primary-900 #7B61FF,
- * background-900 #121212) that appears nowhere in mobile's actual screens.
- * Light is the default; `.dark` is kept for possible future user-preference
- * support but is not applied anywhere by default.
+ * NoteSwift design tokens — see docs/DESIGN-STANDARDS.md §2.1 for the full
+ * rationale. Tinted neutrals (not pure gray) + a cobalt brand ramp + a warm
+ * gold "accent" ramp (streaks, Pro/premium — deliberately not purple) +
+ * refined semantic colors. Light is the default; `.dark` is kept for a
+ * future user-preference toggle even though nothing switches it yet — it
+ * must still render correctly if toggled (§2.1, §11).
  */
 @layer base {
   :root {
-    --background: 0 0% 100%;          /* #FFFFFF */
-    --foreground: 221 39% 11%;        /* gray-900 #111827 */
-    --card: 0 0% 100%;                /* #FFFFFF, distinguished by --border */
-    --card-foreground: 221 39% 11%;   /* gray-900 */
-    --popover: 0 0% 100%;
-    --popover-foreground: 221 39% 11%;
-    --primary: 217 91% 60%;           /* customBlue #3B82F6 — the real brand color */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;         /* gray-100 #F3F4F6 */
-    --secondary-foreground: 221 39% 11%; /* gray-900 */
-    --muted: 210 20% 98%;             /* gray-50 #F9FAFB */
-    --muted-foreground: 220 9% 46%;   /* gray-500 #6B7280 */
-    --accent: 220 14% 96%;            /* gray-100 — neutral hover/highlight, not a brand color */
-    --accent-foreground: 221 39% 11%; /* gray-900 */
-    --destructive: 0 72% 51%;         /* customRed #dc2626 */
+    /* ---- Neutrals (tinted cool-gray, hue 222) ---- */
+    --neutral-0: 220 25% 99%;   /* #FAFBFD page surface */
+    --neutral-50: 220 20% 97%;
+    --neutral-100: 220 18% 94%;
+    --neutral-200: 220 16% 88%;
+    --neutral-300: 220 14% 80%;
+    --neutral-400: 220 10% 64%;
+    --neutral-500: 220 9% 48%;
+    --neutral-600: 222 12% 36%;
+    --neutral-700: 222 16% 26%;
+    --neutral-800: 222 22% 16%;
+    --neutral-900: 222 30% 10%;
+    --neutral-950: 222 34% 6%;
+
+    /* ---- Brand (cobalt, a deliberate step off default Tailwind blue-500) ---- */
+    --brand-50: 219 100% 96%;
+    --brand-100: 218 100% 92%;
+    --brand-200: 217 100% 84%;
+    --brand-300: 216 96% 73%;
+    --brand-400: 217 91% 62%;
+    --brand-500: 221 83% 53%;   /* #2F6FED — primary */
+    --brand-600: 224 76% 44%;
+    --brand-700: 224 71% 36%;
+    --brand-800: 224 64% 29%;
+    --brand-900: 224 58% 23%;
+
+    /* ---- Accent (warm gold — streaks, Pro/premium, celebratory) ---- */
+    --accent-50: 43 100% 95%;
+    --accent-100: 42 100% 87%;
+    --accent-200: 41 97% 74%;
+    --accent-300: 38 95% 62%;
+    --accent-400: 35 88% 52%;
+    --accent-500: 32 78% 45%;   /* #C97F1E — premium accent */
+    --accent-600: 29 74% 37%;
+    --accent-700: 26 68% 30%;
+
+    /* ---- Semantic ---- */
+    --success-500: 152 60% 36%;   /* free / correct / positive */
+    --success-100: 152 55% 92%;
+    --warning-500: 27 82% 44%;    /* upcoming / caution */
+    --warning-100: 27 90% 92%;
+    --danger-500: 4 65% 48%;      /* live / error / destructive */
+    --danger-100: 4 80% 94%;
+    --info-500: var(--brand-500);
+
+    /* ---- Semantic surface tokens (what components actually consume) ---- */
+    --surface: var(--neutral-0);
+    --surface-raised: 0 0% 100%;
+    --surface-sunken: var(--neutral-50);
+    --surface-overlay: 0 0% 100%;      /* dialog/sheet/popover surface */
+    --border-subtle: var(--neutral-100);
+    --border: var(--neutral-200);
+    --border-strong: var(--neutral-300);
+    --text-primary: var(--neutral-900);
+    --text-secondary: var(--neutral-600);
+    --text-muted: var(--neutral-500);
+    --text-disabled: var(--neutral-400);
+    --text-on-brand: 0 0% 100%;
+    --text-on-accent: 0 0% 100%;
+
+    --primary: var(--brand-500);
+    --primary-foreground: var(--text-on-brand);
+    --accent: var(--accent-500);
+    --accent-foreground: var(--text-on-accent);
+    --destructive: var(--danger-500);
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%;            /* gray-200 #E5E7EB */
-    --input: 220 13% 91%;             /* gray-200 */
-    --ring: 217 91% 60%;              /* primary blue */
-    --chart-1: 217 91% 60%;           /* customBlue */
-    --chart-2: 211 100% 50%;          /* buttonBlue #007AFF */
-    --chart-3: 142 71% 45%;           /* green-500 — "free" semantic */
-    --chart-4: 25 95% 53%;            /* orange-500 — "upcoming" semantic */
-    --chart-5: 271 81% 56%;           /* purple-600 — Pro/premium semantic */
-    --radius: 0.875rem;
-    --sidebar-background: 210 20% 98%; /* gray-50 — a secondary surface, distinct from page content */
-    --sidebar-foreground: 221 39% 11%; /* gray-900 */
-    --sidebar-primary: 217 91% 60%;    /* primary blue */
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;     /* gray-100, hover/active row */
-    --sidebar-accent-foreground: 221 39% 11%;
-    --sidebar-border: 220 13% 91%;     /* gray-200 */
-    --sidebar-ring: 217 91% 60%;
+    --ring: var(--brand-500);
+
+    /* shadcn slot compatibility (existing component library reads these) */
+    --background: var(--surface);
+    --foreground: var(--text-primary);
+    --card: var(--surface-raised);
+    --card-foreground: var(--text-primary);
+    --popover: var(--surface-overlay);
+    --popover-foreground: var(--text-primary);
+    --secondary: var(--neutral-100);
+    --secondary-foreground: var(--text-primary);
+    --muted: var(--surface-sunken);
+    --muted-foreground: var(--text-muted);
+    --input: var(--border);
+    --radius: 0.75rem; /* 12px — radius-md, see §2.4 */
+
+    --sidebar-background: var(--neutral-50);
+    --sidebar-foreground: var(--text-primary);
+    --sidebar-primary: var(--brand-500);
+    --sidebar-primary-foreground: var(--text-on-brand);
+    --sidebar-accent: var(--neutral-100);
+    --sidebar-accent-foreground: var(--text-primary);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--brand-500);
+
+    /* Glass tokens — light context (§5) */
+    --glass-bg: 0 0% 100%;
+    --glass-bg-alpha: 0.66;
+    --glass-border-alpha: 0.55;
+    --glass-blur: 16px;
+    --glass-saturate: 140%;
   }
 
-  /* Not applied by default (see html.dark usage below) — kept for a future
-     user-preference toggle. Uses the same blue primary, standard Tailwind
-     dark grays — not the old dark-purple combination. */
   .dark {
-    --background: 221 39% 11%;         /* gray-900 */
-    --foreground: 210 20% 98%;         /* gray-50 */
-    --card: 215 28% 17%;               /* gray-800 */
-    --card-foreground: 210 20% 98%;
-    --popover: 215 28% 17%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 217 91% 60%;            /* same brand blue */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 215 28% 17%;          /* gray-800 */
-    --secondary-foreground: 210 20% 98%;
-    --muted: 215 28% 17%;
-    --muted-foreground: 218 11% 65%;   /* gray-400 */
-    --accent: 215 28% 17%;
-    --accent-foreground: 210 20% 98%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 215 28% 17%;
-    --input: 215 28% 17%;
-    --ring: 217 91% 60%;
-    --chart-1: 217 91% 60%;
-    --chart-2: 211 100% 50%;
-    --chart-3: 142 71% 45%;
-    --chart-4: 25 95% 53%;
-    --chart-5: 271 81% 56%;
-    --sidebar-background: 221 39% 11%;
-    --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 28% 17%;
-    --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 215 28% 17%;
-    --sidebar-ring: 217 91% 60%;
+    --neutral-0: 222 34% 6%;
+    --neutral-50: 222 28% 9%;
+    --neutral-100: 222 24% 13%;
+    --neutral-200: 222 20% 18%;
+    --neutral-300: 222 16% 26%;
+    --neutral-400: 220 12% 40%;
+    --neutral-500: 218 11% 56%;
+    --neutral-600: 216 12% 72%;
+    --neutral-700: 214 14% 84%;
+    --neutral-800: 210 20% 92%;
+    --neutral-900: 210 24% 97%;
+    --neutral-950: 0 0% 100%;
+
+    --brand-400: 217 91% 66%;   /* lifted for dark contrast */
+    --brand-500: 219 90% 60%;   /* primary in dark mode */
+    --brand-600: 221 85% 53%;
+
+    --accent-100: 36 45% 18%;  /* dark tint for the gold "pro" pill bg */
+    --accent-400: 38 92% 58%;
+    --accent-500: 36 88% 52%;
+
+    --success-500: 152 55% 46%;
+    --success-100: 152 40% 16%;
+    --warning-500: 30 85% 55%;
+    --warning-100: 27 55% 16%;
+    --danger-500: 4 72% 58%;
+    --danger-100: 4 45% 18%;
+
+    --surface: var(--neutral-0);
+    --surface-raised: var(--neutral-50);
+    --surface-sunken: var(--neutral-100);
+    --surface-overlay: var(--neutral-100);
+    --border-subtle: var(--neutral-100);
+    --border: var(--neutral-200);
+    --border-strong: var(--neutral-300);
+    --text-primary: var(--neutral-900);
+    --text-secondary: var(--neutral-600);
+    --text-muted: var(--neutral-500);
+    --text-disabled: var(--neutral-400);
+
+    --primary: var(--brand-500);
+    --accent: var(--accent-500);
+    --destructive: var(--danger-500);
+    --ring: var(--brand-500);
+
+    --background: var(--surface);
+    --foreground: var(--text-primary);
+    --card: var(--surface-raised);
+    --card-foreground: var(--text-primary);
+    --popover: var(--surface-overlay);
+    --popover-foreground: var(--text-primary);
+    --secondary: var(--neutral-100);
+    --secondary-foreground: var(--text-primary);
+    --muted: var(--surface-sunken);
+    --muted-foreground: var(--text-muted);
+    --input: var(--border);
+
+    --sidebar-background: var(--neutral-50);
+    --sidebar-foreground: var(--text-primary);
+    --sidebar-primary: var(--brand-500);
+    --sidebar-accent: var(--neutral-100);
+    --sidebar-border: var(--border);
+
+    --glass-bg: 222 24% 14%;
+    --glass-bg-alpha: 0.55;
+    --glass-border-alpha: 0.10;
+    --glass-blur: 18px;
+    --glass-saturate: 160%;
   }
 }
 
 @layer base {
-  html {
-    font-size: 93%; /* Slightly larger base — ~15px */
-  }
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Glass surface utility (§5) — apply only to the allow-listed surfaces in
+   §5.1 (sticky header, dialog/sheet-with-scrim, floating action bars, the
+   streak-celebration overlay, a text scrim over imagery). Never on a card
+   in a scrollable grid/list (§5.2). */
+.glass-surface {
+  background-color: hsl(var(--glass-bg) / var(--glass-bg-alpha));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid hsl(0 0% 100% / var(--glass-border-alpha));
+  box-shadow: theme("boxShadow.glass");
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-surface {
+    background-color: hsl(var(--surface-raised));
+    backdrop-filter: none;
+    box-shadow: theme("boxShadow.3");
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-surface {
+    background-color: hsl(var(--surface-raised));
+    backdrop-filter: none;
+    box-shadow: theme("boxShadow.3");
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -160,6 +293,29 @@
 
 .animation-delay-4000 {
   animation-delay: 4s;
+}
+
+/* Skeleton shimmer (§6.11) — a continuous 1.5s linear loop, deliberately not
+   one of the interaction-motion tokens (§2.6): those are for one-off state
+   transitions, this is a loop indicating "still loading." */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--neutral-100)) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
 }
 
 /* Hide scrollbar while keeping scroll functionality */

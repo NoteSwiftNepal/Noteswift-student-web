@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Radio } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import type { LiveClass } from "@/types/live-class";
 
@@ -39,13 +38,12 @@ export function JoinLiveClassDialog({
       <DialogContent>
         <DialogHeader>
           {liveClass.status === "ongoing" && (
-            <Badge className="mb-2 w-fit gap-1 bg-red-100 text-red-700 hover:bg-red-100">
-              <Radio className="size-3" />
+            <StatusBadge tone="live" className="mb-2">
               LIVE
-            </Badge>
+            </StatusBadge>
           )}
           <DialogTitle>{liveClass.title}</DialogTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body-sm text-muted-foreground">
             {liveClass.teacher} &middot; {liveClass.subject}
           </p>
         </DialogHeader>
@@ -53,7 +51,7 @@ export function JoinLiveClassDialog({
           <Button variant="secondary" onClick={() => onOpenChange(false)} className="flex-1">
             Maybe later
           </Button>
-          <Button onClick={handleJoin} className="flex-1 bg-red-500 hover:bg-red-500/90">
+          <Button onClick={handleJoin} className="flex-1 bg-danger-500 hover:bg-danger-500/90">
             Join now
           </Button>
         </DialogFooter>

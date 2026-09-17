@@ -7,6 +7,7 @@ import { getVideoSignedUrl } from "@/api/student/learn";
 import { updateModuleProgress } from "@/api/lessonProgress";
 import type { ModuleVideo } from "@/types/subject-content";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useVideoDurationStore } from "@/stores/videoDurationStore";
 
 // A recording pulled in from a live class uses the same 80% "watched"
 // threshold as the attendance-based content grant; every other (teacher-
@@ -34,6 +35,7 @@ export function ChapterVideoTab({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasMarkedRef = useRef(alreadyCompleted);
+  const setDuration = useVideoDurationStore((s) => s.setDuration);
 
   const { data, isPending, error } = useQuery({
     queryKey: ["video-signed-url", courseId, subjectName, moduleNumber, videoIndex],
@@ -66,32 +68,55 @@ export function ChapterVideoTab({
     }
   };
 
+  // The lecture list's stored `duration` string is unreliable (see
+  // formatDuration.ts) — once the actual media loads, its real duration is
+  // authoritative. Cached (not just used locally) so the list shows the
+  // corrected value on future visits too, mirroring mobile's own
+  // real-metadata-over-stored-string behavior.
+  const handleLoadedMetadata = () => {
+    const el = videoRef.current;
+    if (el && Number.isFinite(el.duration) && el.duration > 0) {
+      setDuration(video.url, el.duration);
+    }
+  };
+
   if (isPending) {
-    return <Skeleton className="aspect-video w-full rounded-xl" />;
+    return <Skeleton className="aspect-video w-full rounded-md" />;
   }
 
   if (error || !data) {
     return (
-      <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border">
+      <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border">
         <PlayCircle className="size-10 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Couldn&apos;t load this video.</p>
+        <p className="text-body-sm text-muted-foreground">Couldn&apos;t load this video.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
+      {/* View-only hardening (docs/DESIGN-STANDARDS.md §12 fix-pass) — a
+          best-effort deterrent, not real DRM: the signed URL is still a
+          real, fetchable network response visible in devtools regardless
+          of any of this. controlsList/disablePictureInPicture remove the
+          browser's own built-in "download"/PiP affordances from the native
+          player chrome, and onContextMenu removes the one-right-click "Save
+          video as" shortcut — neither stops a determined extraction. */}
       <video
         ref={videoRef}
         src={data.signedUrl}
         controls
-        className="aspect-video w-full rounded-xl bg-black"
+        controlsList="nodownload noremoteplayback"
+        disablePictureInPicture
+        onContextMenu={(e) => e.preventDefault()}
+        className="aspect-video w-full rounded-md bg-neutral-950"
         onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
       />
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex items-center justify-between text-caption text-muted-foreground">
         <span>{data.title}</span>
         {(hasMarkedRef.current || watchedRatio >= completionThreshold(video)) && (
-          <span className="font-medium text-green-700">Completed</span>
+          <span className="font-medium text-success-500">Completed</span>
         )}
       </div>
     </div>

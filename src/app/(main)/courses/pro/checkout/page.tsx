@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CreditCard, Smartphone, Wallet } from "lucide-react";
+import { ChevronLeft, CreditCard, Smartphone, Wallet } from "lucide-react";
 import { useCourses } from "@/hooks/queries/useCourses";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -59,9 +59,20 @@ function ProCheckoutContent() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Checkout</h1>
-        <p className="text-sm text-muted-foreground">Review your Pro package and pay.</p>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 text-muted-foreground"
+          onClick={() => router.back()}
+          aria-label="Back"
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Checkout</h1>
+          <p className="text-sm text-muted-foreground">Review your Pro package and pay.</p>
+        </div>
       </div>
 
       <Card>

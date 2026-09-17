@@ -1,194 +1,198 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { ClipboardList, Clock, CheckCircle2, Lock } from "lucide-react";
-import { useAuthStore } from "@/stores/authStore";
-import { useEnrollments } from "@/hooks/queries/useEnrollments";
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, ClipboardList, Gauge } from "lucide-react";
+import { useSelectedCourse } from "@/hooks/useSelectedCourse";
 import { useTests } from "@/hooks/queries/useTests";
-import { resolveCourse } from "@/lib/course";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { getCourseId } from "@/lib/course";
+import { StatTile } from "@/components/ui/stat-tile";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InlineError } from "@/components/inline-error";
-import type { Test } from "@/types/test";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TestRow } from "@/components/test/test-row";
+import { TestSubjectCard } from "@/components/test/test-subject-card";
 
-function statusBadge(test: Test) {
-  if (test.attemptInfo?.status === "submitted" || test.attemptInfo?.status === "evaluated") {
-    return (
-      <Badge className="gap-1 bg-green-100 text-green-700 hover:bg-green-100">
-        <CheckCircle2 className="size-3" />
-        {Math.round(test.attemptInfo.percentage)}%
-      </Badge>
-    );
-  }
-  if (test.attemptInfo?.status === "in-progress") {
-    return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">In progress</Badge>;
-  }
-  if (test.availability === "upcoming") {
-    return (
-      <Badge variant="secondary" className="gap-1">
-        <Lock className="size-3" />
-        Upcoming
-      </Badge>
-    );
-  }
-  if (test.availability === "closed") {
-    return (
-      <Badge variant="secondary" className="gap-1">
-        <Lock className="size-3" />
-        Closed
-      </Badge>
-    );
-  }
-  return null;
-}
-
-function TestListPageContent() {
+// Mirrors mobile's real app/(tabs)/Test/TestPage.tsx structure — no inline
+// course picker (reads the app-wide useSelectedCourse, same as Learn/
+// Progress/My Batches), a stats card (Total/Completed/Avg Score), and a
+// subject-scoped + type-filtered test list. The tab structure itself
+// (Subjects/MCQ/Subjective) is a deliberate web adaptation — mobile's own
+// screen crosses a separate status-tabs (All/Completed/Pending) row with
+// togglable MCQ/Subjective "type cards" filtering one list, which doesn't
+// map cleanly onto three mutually-exclusive tabs; each test row's own
+// StatusBadge already carries the per-test status mobile's status tabs
+// would otherwise filter by. Subjects is a pure picker — subject cards
+// only, no tests inline — clicking one navigates to a real route
+// (/test/subject/[subjectName]) rather than expanding in-page state.
+export default function TestListPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const userId = useAuthStore((s) => s.user?.id);
-  const { enrollments, enrollmentsLoading } = useEnrollments(userId);
-
-  const courses = useMemo(
-    () => enrollments.map((e) => resolveCourse(e.courseId)).filter((c): c is NonNullable<typeof c> => !!c),
-    [enrollments]
-  );
-
-  const courseId = searchParams.get("courseId") || courses[0]?._id || "";
+  const { selectedCourse, enrolledCourses, enrollmentsLoading, error, refetch } = useSelectedCourse();
+  const courseId = selectedCourse ? getCourseId(selectedCourse) : "";
   const { tests, testsLoading, error: testsError, refetch: refetchTests } = useTests(courseId || undefined);
 
-  const setCourse = (newCourseId: string) => {
-    router.push(`/test?${new URLSearchParams({ courseId: newCourseId }).toString()}`);
-  };
-
-  const bySubject = useMemo(() => {
-    const groups = new Map<string, Test[]>();
+  // Subjects tab shows only subject-summary cards now (no tests inline) —
+  // aggregated once here rather than per-render inside the tab.
+  const subjectSummaries = useMemo(() => {
+    const groups = new Map<string, { total: number; completed: number }>();
     for (const test of tests) {
       const key = test.subjectName || "General";
-      groups.set(key, [...(groups.get(key) ?? []), test]);
+      const entry = groups.get(key) ?? { total: 0, completed: 0 };
+      entry.total += 1;
+      if (test.attemptInfo?.status === "submitted" || test.attemptInfo?.status === "evaluated") {
+        entry.completed += 1;
+      }
+      groups.set(key, entry);
     }
-    return groups;
+    return Array.from(groups.entries()).map(([subjectName, counts]) => ({ subjectName, ...counts }));
   }, [tests]);
+
+  const mcqTests = useMemo(() => tests.filter((t) => t.type === "mcq"), [tests]);
+  const subjectiveTests = useMemo(() => tests.filter((t) => t.type === "subjective"), [tests]);
+
+  const totalTests = tests.length;
+  const completedTests = tests.filter(
+    (t) => t.attemptInfo?.status === "submitted" || t.attemptInfo?.status === "evaluated"
+  ).length;
+  // Exactly mirrors mobile's own computation (app/(tabs)/Test/TestPage.tsx):
+  // sum of attemptInfo.percentage across tests that HAVE one (an
+  // un-attempted test is excluded, not treated as a 0), divided by
+  // completedTests — not scoredTests.length and not totalTests — with the
+  // same `|| 1` divide-by-zero guard mobile uses rather than a `=== 0 ? 0`
+  // branch, so this stays byte-for-byte the same formula, not just the
+  // same idea.
+  const scoredTests = tests.filter((t) => t.attemptInfo?.percentage !== undefined);
+  const averageScore =
+    scoredTests.reduce((sum, t) => sum + (t.attemptInfo?.percentage ?? 0), 0) / (completedTests || 1);
 
   if (enrollmentsLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-24 w-full" />
+        <div className="grid grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[68px] w-full rounded-md" />
+          ))}
+        </div>
+        <Skeleton className="h-10 w-full max-w-md rounded-md" />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-md" />
+          ))}
+        </div>
       </div>
     );
   }
 
-  if (courses.length === 0) {
+  if (error) {
+    return <InlineError message="Couldn't load your courses." onRetry={() => refetch()} />;
+  }
+
+  if (enrolledCourses.length === 0 || !selectedCourse) {
     return (
-      <div className="rounded-xl border border-dashed border-border p-12 text-center">
-        <ClipboardList className="mx-auto mb-3 size-10 text-muted-foreground" />
-        <p className="text-sm font-semibold text-foreground">No enrolled courses yet</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          <Link href="/courses" className="text-primary hover:underline">
-            Browse courses
-          </Link>{" "}
-          to find tests.
-        </p>
-      </div>
+      <EmptyState
+        icon={ClipboardList}
+        title="No course selected"
+        description={
+          enrolledCourses.length === 0
+            ? "Browse courses to get started."
+            : "Select a course from My Batches to start testing."
+        }
+        action={
+          enrolledCourses.length === 0
+            ? { label: "Browse courses", onClick: () => router.push("/courses") }
+            : { label: "Go to My Batches", onClick: () => router.push("/courses/my-batches") }
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Test</h1>
-        <p className="text-sm text-muted-foreground">Practice tests for your enrolled courses.</p>
-      </div>
-
-      <Select value={courseId} onValueChange={setCourse}>
-        <SelectTrigger className="w-full sm:w-80">
-          <SelectValue placeholder="Select a course" />
-        </SelectTrigger>
-        <SelectContent>
-          {courses.map((c) => (
-            <SelectItem key={c._id} value={c._id}>
-              {c.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
       {testsLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-xl" />
-          ))}
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-[68px] w-full rounded-md" />
+            ))}
+          </div>
+          <Skeleton className="h-10 w-full max-w-md rounded-md" />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-md" />
+            ))}
+          </div>
         </div>
       ) : testsError ? (
         <InlineError message="Couldn't load tests." onRetry={() => refetchTests()} />
-      ) : tests.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
-          No tests available for this course yet.
-        </div>
       ) : (
-        Array.from(bySubject.entries()).map(([subject, subjectTests]) => (
-          <section key={subject}>
-            <h2 className="mb-3 text-lg font-bold text-foreground">{subject}</h2>
-            <div className="space-y-3">
-              {subjectTests.map((test) => (
-                <Card key={test._id}>
-                  <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{test.title}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        {test.moduleName && <span>{test.moduleName}</span>}
-                        <span className="flex items-center gap-1">
-                          <Clock className="size-3" />
-                          {test.duration} min
-                        </span>
-                        <span className="uppercase">{test.type}</span>
-                        <span>
-                          {test.totalQuestions} question{test.totalQuestions === 1 ? "" : "s"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {statusBadge(test)}
-                      {test.attemptInfo?.status === "in-progress" ? (
-                        <Button size="sm" asChild>
-                          <Link href={`/test/${test._id}`}>Continue</Link>
-                        </Button>
-                      ) : test.attemptInfo?.status === "submitted" || test.attemptInfo?.status === "evaluated" ? (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={`/test/${test._id}/result/${test.attemptInfo.attemptId}`}>
-                            View results
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button size="sm" disabled={!test.canAttempt} asChild={test.canAttempt}>
-                          {test.canAttempt ? (
-                            <Link href={`/test/${test._id}`}>Start</Link>
-                          ) : (
-                            <span>Start</span>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-        ))
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            <StatTile icon={ClipboardList} iconClassName="bg-primary/10 text-primary" value={totalTests} label="Total Tests" />
+            <StatTile
+              icon={CheckCircle2}
+              iconClassName="bg-success-100 text-success-700"
+              value={completedTests}
+              label="Completed"
+            />
+            <StatTile
+              icon={Gauge}
+              iconClassName="bg-accent/10 text-accent"
+              value={`${Math.round(averageScore)}%`}
+              label="Avg Score"
+            />
+          </div>
+
+          <Tabs defaultValue="subjects">
+            <TabsList>
+              <TabsTrigger value="subjects">Subjects</TabsTrigger>
+              <TabsTrigger value="mcq">MCQ</TabsTrigger>
+              <TabsTrigger value="subjective">Subjective</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="subjects">
+              {subjectSummaries.length === 0 ? (
+                <EmptyState icon={ClipboardList} title="No tests available for this course yet" />
+              ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {subjectSummaries.map((s) => (
+                    <TestSubjectCard
+                      key={s.subjectName}
+                      subjectName={s.subjectName}
+                      totalTests={s.total}
+                      completedTests={s.completed}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="mcq">
+              {mcqTests.length === 0 ? (
+                <EmptyState icon={ClipboardList} title="No MCQ tests available for this course yet" />
+              ) : (
+                <div className="space-y-3">
+                  {mcqTests.map((test) => (
+                    <TestRow key={test._id} test={test} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="subjective">
+              {subjectiveTests.length === 0 ? (
+                <EmptyState icon={ClipboardList} title="No subjective tests available for this course yet" />
+              ) : (
+                <div className="space-y-3">
+                  {subjectiveTests.map((test) => (
+                    <TestRow key={test._id} test={test} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </>
       )}
     </div>
-  );
-}
-
-export default function TestListPage() {
-  return (
-    <Suspense fallback={null}>
-      <TestListPageContent />
-    </Suspense>
   );
 }

@@ -72,3 +72,7 @@ export type JoinClassroomAck =
 export type SendMessageAck =
   | { ok: true; message: ChatMessage; replay?: boolean }
   | { ok: false; reason: string; retryAfterMs?: number; maxLength?: number };
+
+export type SyncMessagesAck =
+  | { ok: true; messages: ChatMessage[]; deletedMessageIds: string[] }
+  | { ok: false; reason: string };

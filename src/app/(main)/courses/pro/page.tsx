@@ -2,9 +2,11 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Crown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Crown } from "lucide-react";
 import { useCourses } from "@/hooks/queries/useCourses";
 import { CourseCard } from "@/components/courses/course-card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InlineError } from "@/components/inline-error";
 
@@ -13,6 +15,7 @@ import { InlineError } from "@/components/inline-error";
 // deliberate simplification — same idea (browse Pro courses by program),
 // without hardcoding a fixed program list the backend already owns.
 export default function ProMarketplacePage() {
+  const router = useRouter();
   const { courses, coursesLoading, error, refetch } = useCourses();
 
   const proCoursesByProgram = useMemo(() => {
@@ -28,9 +31,19 @@ export default function ProMarketplacePage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-3">
-        {/* Small Pro/premium icon chip — the one sanctioned use of purple
-            (blueprint §6), not a page-level brand color. */}
-        <div className="flex size-12 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 text-muted-foreground"
+          onClick={() => router.back()}
+          aria-label="Back"
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        {/* Small Pro/premium icon chip — gold, not purple (§2.1 retired
+            purple as the "premium" signal in favor of the accent gold
+            ramp; matches StatusBadge's own `pro` tone). */}
+        <div className="flex size-12 items-center justify-center rounded-xl bg-gold-100 text-gold-700">
           <Crown className="size-6" />
         </div>
         <div>

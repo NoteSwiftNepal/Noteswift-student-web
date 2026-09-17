@@ -1,81 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { PlayCircle } from "lucide-react";
-import { ChapterVideoTab } from "@/components/learn/chapter-video-tab";
-import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useVideoDurationStore } from "@/stores/videoDurationStore";
+import { formatDuration, formatSecondsToClock } from "@/lib/formatDuration";
 import type { ModuleVideo } from "@/types/subject-content";
 
 // Mobile calls this tab "Lectures" (plural) because a module can have more
-// than one lecture video (modules/[moduleId].tsx's videos[] list) — the
-// earlier Phase 3 implementation only ever played videos[0] under a
-// singular "Video" tab. This adds the picker mobile has and reuses the
-// existing, already-working ChapterVideoTab player/progress-marking
-// component as-is for whichever lecture is selected, rather than
-// duplicating video-playback logic.
+// than one lecture video (modules/[moduleId].tsx's videos[] list). Cards
+// here are a picker list only — clicking one navigates to the dedicated
+// lecture-detail route (player + teacher + like + comments, mirroring
+// mobile's real per-video screen) rather than expanding a player inline.
+function LectureCard({
+  video,
+  index,
+  onClick,
+}: {
+  video: ModuleVideo;
+  index: number;
+  onClick: () => void;
+}) {
+  const cachedSeconds = useVideoDurationStore((s) => s.durationsBySeconds[video.url]);
+  const displayDuration = cachedSeconds ? formatSecondsToClock(cachedSeconds) : formatDuration(video.duration);
+
+  return (
+    <Card
+      onClick={onClick}
+      className="cursor-pointer transition-[transform,box-shadow] duration-fast ease-standard hover:-translate-y-0.5 hover:shadow-2"
+    >
+      <CardContent className="flex items-center gap-3 p-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <PlayCircle className="size-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-title text-foreground">{video.title || `Lecture ${index + 1}`}</p>
+          {displayDuration && <p className="text-caption text-muted-foreground">{displayDuration}</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ChapterLecturesTab({
-  courseId,
   subjectName,
   moduleNumber,
-  courseSubjectId,
   videos,
-  alreadyCompleted,
 }: {
-  courseId: string;
   subjectName: string;
   moduleNumber: number;
-  courseSubjectId: string;
   videos: ModuleVideo[];
-  alreadyCompleted: boolean;
 }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const router = useRouter();
 
   if (videos.length === 0) {
-    return (
-      <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border">
-        <PlayCircle className="size-10 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">No video lectures for this module yet.</p>
-      </div>
-    );
+    return <EmptyState icon={PlayCircle} title="No video lectures for this module yet" />;
   }
 
   return (
-    <div className="space-y-4">
-      <ChapterVideoTab
-        key={activeIndex}
-        courseId={courseId}
-        subjectName={subjectName}
-        moduleNumber={moduleNumber}
-        courseSubjectId={courseSubjectId}
-        video={videos[activeIndex]}
-        videoIndex={activeIndex}
-        alreadyCompleted={activeIndex === 0 && alreadyCompleted}
-      />
-
-      {videos.length > 1 && (
-        <div className="space-y-2">
-          {videos.map((video, index) => (
-            <button
-              key={video.url}
-              onClick={() => setActiveIndex(index)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors",
-                index === activeIndex ? "border-primary bg-primary/5" : "border-border hover:bg-secondary/40"
-              )}
-            >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <PlayCircle className="size-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {video.title || `Lecture ${index + 1}`}
-                </p>
-                {video.duration && <p className="text-xs text-muted-foreground">{video.duration}</p>}
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="space-y-2">
+      {videos.map((video, index) => (
+        <LectureCard
+          key={video.url}
+          video={video}
+          index={index}
+          onClick={() =>
+            router.push(
+              `/learn/subject/${encodeURIComponent(subjectName)}/module/${moduleNumber}/lecture/${index}`
+            )
+          }
+        />
+      ))}
     </div>
   );
 }

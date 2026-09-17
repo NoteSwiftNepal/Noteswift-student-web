@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ChevronLeft } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useCourses } from "@/hooks/queries/useCourses";
 import { useEnrollments, useInvalidateCourseAccess } from "@/hooks/queries/useEnrollments";
@@ -84,9 +84,20 @@ export default function CourseCheckoutPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Checkout</h1>
-        <p className="text-sm text-muted-foreground">Get access to {course.title}.</p>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 text-muted-foreground"
+          onClick={() => router.back()}
+          aria-label="Back"
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Checkout</h1>
+          <p className="text-sm text-muted-foreground">Get access to {course.title}.</p>
+        </div>
       </div>
 
       <Card>

@@ -1,12 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, MessageCircleQuestion } from "lucide-react";
 import { useSelectedCourse } from "@/hooks/useSelectedCourse";
 import { useSubjectContent } from "@/hooks/queries/useSubjectContent";
-import { getModuleProgress } from "@/api/lessonProgress";
 import { getCourseId } from "@/lib/course";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -35,16 +33,6 @@ export default function ModuleDetailPage() {
   const mod = subjectContent?.modules.find((m) => m.moduleNumber === moduleNumber);
   const courseSubjectId = subjectContent?.courseSubjectId ?? "";
 
-  const { data: progress } = useQuery({
-    queryKey: ["module-progress", courseId, moduleNumber, courseSubjectId],
-    queryFn: async () => {
-      const res = await getModuleProgress(courseId, moduleNumber, courseSubjectId);
-      if (!res.success) throw new Error(res.message);
-      return res.data.moduleProgress;
-    },
-    enabled: !!courseId && !!courseSubjectId,
-  });
-
   if (!selectedCourse) {
     return <RoutePlaceholder title="No course selected" />;
   }
@@ -52,8 +40,8 @@ export default function ModuleDetailPage() {
   if (subjectContentLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="aspect-video w-full rounded-xl" />
+        <Skeleton className="h-10 w-full max-w-md rounded-md" />
+        <Skeleton className="aspect-video w-full rounded-md" />
       </div>
     );
   }
@@ -72,46 +60,41 @@ export default function ModuleDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" onClick={() => router.back()}>
-        <ChevronLeft className="size-4" />
-        Back
-      </Button>
-
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{mod.moduleName}</h1>
-        <p className="text-sm text-muted-foreground">
-          {subjectContent.courseName} &middot; {subjectName}
-        </p>
-      </div>
-
       <Tabs defaultValue="lectures">
-        <TabsList className="h-auto flex-wrap">
-          <TabsTrigger value="lectures">Lectures</TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
-          <TabsTrigger value="dpps">DPPs</TabsTrigger>
-          <TabsTrigger value="solutions">Solutions</TabsTrigger>
-          <TabsTrigger value="mindmap">Mind Map</TabsTrigger>
-        </TabsList>
+        {/* Back button lives in the tab strip's own row (same fix as
+            /learn/subject/[subjectName]) instead of floating above it as an
+            isolated full-width line. */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-muted-foreground"
+            onClick={() => router.back()}
+            aria-label="Back"
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <TabsList className="h-auto min-w-0 flex-1 flex-wrap">
+            <TabsTrigger value="lectures">Lectures</TabsTrigger>
+            <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="dpps">DPPs</TabsTrigger>
+            <TabsTrigger value="solutions">Solutions</TabsTrigger>
+            <TabsTrigger value="mindmap">Mind Map</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="lectures" className="mt-4">
-          <ChapterLecturesTab
+          <ChapterLecturesTab subjectName={subjectName} moduleNumber={moduleNumber} videos={mod.videos} />
+        </TabsContent>
+
+        <TabsContent value="notes" className="mt-4">
+          <ChapterNotesTab
             courseId={courseId}
             subjectName={subjectName}
             moduleNumber={moduleNumber}
             courseSubjectId={courseSubjectId}
-            videos={mod.videos}
-            alreadyCompleted={!!progress?.videoCompleted}
+            notes={mod.notes}
           />
-        </TabsContent>
-
-        <TabsContent value="notes" className="mt-4">
-          {mod.hasNotes ? (
-            <ChapterNotesTab courseId={courseId} subjectName={subjectName} moduleNumber={moduleNumber} courseSubjectId={courseSubjectId} />
-          ) : (
-            <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
-              No notes available for this module.
-            </div>
-          )}
         </TabsContent>
 
         <TabsContent value="dpps" className="mt-4">
