@@ -2,8 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Loader2, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  QrCode,
+  Landmark,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useFonepayCheckout } from "@/hooks/useFonepayCheckout";
 import { FonepayLogo } from "@/components/checkout/FonepayLogo";
 import { Button } from "@/components/ui/button";
@@ -76,6 +84,46 @@ function rankBanks(banks: FonepayBankListItem[], query: string): FonepayBankList
 // tradeoff for scrolling actually working.
 const BANK_LIST_HEIGHT = 280;
 
+// Phones and tablets: anything narrower than a laptop, or any touch-first
+// device (an iPad in landscape is wider than 1024px but still handheld).
+// These get a choice between scanning the QR and opening a bank app;
+// desktops only ever see the QR.
+const HANDHELD_QUERY = "(max-width: 1023px), (pointer: coarse)";
+
+function useIsHandheld() {
+  // Read synchronously on the client: this decides whether the payment
+  // opens a Fonepay socket, so it must be right before the first QR.
+  const [handheld, setHandheld] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(HANDHELD_QUERY).matches
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(HANDHELD_QUERY);
+    const update = () => setHandheld(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
+  return handheld;
+}
+
+type PayMethod = "qr" | "bank";
+
+// Seconds left until expiresAt, ticking once a second; null without one.
+function useSecondsLeft(expiresAt: number | null) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (expiresAt === null) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+  return expiresAt === null ? null : Math.max(0, Math.ceil((expiresAt - now) / 1000));
+}
+
+function formatCountdown(seconds: number) {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
 interface FonepayCheckoutProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -85,9 +133,10 @@ interface FonepayCheckoutProps {
 }
 
 /**
- * Fonepay Checkout Intent modal: mobile taps a bank -> deep link to that
- * bank's app; desktop scans a QR with any Fonepay-enabled bank app. Either
- * way, a WebSocket connected right after initiate (see useFonepayCheckout)
+ * Fonepay Checkout Intent modal. Desktop shows the QR to scan with any
+ * Fonepay-enabled bank app. Phones and tablets first choose between that QR
+ * and "pay via bank app" (tap a bank -> deep link into it), with a Back
+ * button to switch between the two. Either way, a WebSocket connected right after initiate (see useFonepayCheckout)
  * signals when to re-check status — the actual outcome always comes from
  * the backend's own verify call, never the socket message itself.
  */
@@ -98,19 +147,30 @@ export function FonepayCheckout({
   courseTitle,
   onEnrolled,
 }: FonepayCheckoutProps) {
-  const isMobile = useIsMobile();
+  const isHandheld = useIsHandheld();
+  // null = handheld user hasn't picked yet (shows the chooser).
+  const [method, setMethod] = useState<PayMethod | null>(null);
   const [bankSearch, setBankSearch] = useState("");
   const {
     stage,
     qrString,
+    qrExpiresAt,
     bankList,
     errorMessage,
     showManualCheck,
+    notice,
     start,
     payWithBank,
     checkStatusManually,
+    refreshQr,
     reset,
-  } = useFonepayCheckout(courseId, onEnrolled);
+    socketLost,
+  } = useFonepayCheckout(courseId, onEnrolled, { liveUpdates: !isHandheld });
+
+  const secondsLeft = useSecondsLeft(qrExpiresAt);
+  // Past our display window, or dead on Fonepay's side after its socket
+  // dropped (desktop only) — either way this QR can't be paid.
+  const qrExpired = secondsLeft === 0 || socketLost;
 
   const filteredBankList = useMemo(() => rankBanks(bankList, bankSearch), [bankList, bankSearch]);
 
@@ -129,9 +189,156 @@ export function FonepayCheckout({
     if (!next) {
       reset();
       setBankSearch("");
+      setMethod(null);
     }
     onOpenChange(next);
   };
+
+  const backButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="-ml-2 gap-1 self-start text-muted-foreground"
+      onClick={() => setMethod(null)}
+    >
+      <ChevronLeft className="size-4" />
+      Back
+    </Button>
+  );
+
+  // Shown under the QR and the bank list: a live countdown for the current
+  // QR, then an expired notice with a button that fetches a new one (keeps
+  // the chosen method; a new transaction and reference are created).
+  const expiryLine =
+    qrExpired ? (
+      <div className="flex w-full flex-col items-center gap-2">
+        <p className="text-sm font-medium text-destructive">
+          {socketLost ? "This QR is no longer valid" : "This QR has expired"}
+        </p>
+        <Button type="button" variant="outline" className="gap-2" onClick={refreshQr}>
+          <RefreshCw className="size-3.5" />
+          Get a new QR
+        </Button>
+      </div>
+    ) : secondsLeft === null ? null : (
+      <p className="text-xs text-muted-foreground" aria-live="polite">
+        QR expires in{" "}
+        <span className={`font-mono font-semibold ${secondsLeft <= 30 ? "text-destructive" : "text-foreground"}`}>
+          {formatCountdown(secondsLeft)}
+        </span>
+      </p>
+    );
+
+  // Layout matches Fonepay's own "Desktop Preview" guideline page: logo
+  // center-aligned above the QR, "Use your Mobile Banking or Wallets App to
+  // scan" heading, QR, red Check Status button, then the how-to-pay steps.
+  const qrView = (
+    <div className="flex w-full flex-col items-center gap-3">
+      <FonepayLogo variant="lockup" height={28} />
+      <p className="text-sm font-medium text-foreground">
+        Use your Mobile Banking or Wallets App to scan
+      </p>
+      {qrString && (
+        <div className={`rounded-lg border bg-white p-4 ${qrExpired ? "opacity-30" : ""}`}>
+          <QRCodeSVG value={qrString} size={220} />
+        </div>
+      )}
+      {expiryLine}
+      <Button
+        type="button"
+        onClick={checkStatusManually}
+        className="w-full gap-2"
+        style={{ backgroundColor: "#ce2027", color: "#ffffff" }}
+      >
+        <RefreshCw className="size-3.5" />
+        Check Status
+      </Button>
+      <ol className="w-full list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+        <li>Open your mobile banking app or digital wallet.</li>
+        <li>Log in, or simply tap the scan button (login not always required).</li>
+        <li>Scan the QR code.</li>
+        <li>Verify the payment details.</li>
+        <li>Tap Confirm to complete your payment.</li>
+      </ol>
+    </div>
+  );
+
+  const bankView = (
+    <div className="w-full space-y-3">
+      <div className="flex flex-col items-center gap-2">
+        <FonepayLogo variant="lockup" height={26} />
+        <p className="text-sm font-medium text-foreground">Select your bank or wallet</p>
+      </div>
+      <Input
+        placeholder="Search..."
+        value={bankSearch}
+        onChange={(e) => setBankSearch(e.target.value)}
+      />
+      <div className="flex justify-center">{expiryLine}</div>
+      <ScrollArea style={{ height: BANK_LIST_HEIGHT }} className="rounded-lg border">
+        <div className="space-y-1 p-1.5">
+          {filteredBankList.length === 0 ? (
+            <p className="p-3 text-center text-xs text-muted-foreground">
+              No matching bank or wallet found.
+            </p>
+          ) : (
+            filteredBankList.map((bank) => (
+              <Button
+                key={bank.bankCode}
+                type="button"
+                variant="outline"
+                className="w-full justify-start gap-3"
+                disabled={qrExpired}
+                onClick={() => payWithBank(bank)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={bank.bankIcon} alt="" className="size-6 shrink-0 rounded" />
+                {bank.bankName}
+              </Button>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+
+  const methodOption = (value: PayMethod, Icon: typeof QrCode, title: string, subtitle: string) => (
+    <button
+      type="button"
+      onClick={() => setMethod(value)}
+      className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:border-primary"
+    >
+      <Icon className="size-6 shrink-0 text-primary" />
+      <span className="flex-1">
+        <span className="block text-sm font-medium text-foreground">{title}</span>
+        <span className="block text-xs text-muted-foreground">{subtitle}</span>
+      </span>
+      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+    </button>
+  );
+
+  const chooserView = (
+    <div className="w-full space-y-3">
+      <div className="flex flex-col items-center gap-2">
+        <FonepayLogo variant="lockup" height={26} />
+        <p className="text-sm font-medium text-foreground">How would you like to pay?</p>
+      </div>
+      {methodOption("bank", Landmark, "Pay via bank app", "Open your mobile banking or wallet app directly")}
+      {methodOption("qr", QrCode, "Scan QR code", "Show a QR to scan with your banking app")}
+    </div>
+  );
+
+  let paymentView = qrView;
+  if (isHandheld) {
+    paymentView =
+      method === null ? chooserView : (
+        <div className="flex w-full flex-col gap-2">
+          {backButton}
+          {method === "qr" ? qrView : bankView}
+        </div>
+      );
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -152,80 +359,32 @@ export function FonepayCheckout({
 
         {stage === "awaiting-payment" && (
           <div className="flex flex-col items-center gap-4 py-4">
-            {isMobile ? (
-              <div className="w-full space-y-3">
-                <div className="flex flex-col items-center gap-2">
-                  <FonepayLogo variant="lockup" height={26} />
-                  <p className="text-sm font-medium text-foreground">Select Payment Method</p>
-                </div>
-                <Input
-                  placeholder="Search..."
-                  value={bankSearch}
-                  onChange={(e) => setBankSearch(e.target.value)}
-                />
-                <ScrollArea style={{ height: BANK_LIST_HEIGHT }} className="rounded-lg border">
-                  <div className="space-y-1 p-1.5">
-                    {filteredBankList.length === 0 ? (
-                      <p className="p-3 text-center text-xs text-muted-foreground">
-                        No matching bank or wallet found.
-                      </p>
-                    ) : (
-                      filteredBankList.map((bank) => (
-                        <Button
-                          key={bank.bankCode}
-                          variant="outline"
-                          className="w-full justify-start gap-3"
-                          onClick={() => payWithBank(bank)}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={bank.bankIcon} alt="" className="size-6 shrink-0 rounded" />
-                          {bank.bankName}
-                        </Button>
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
-            ) : (
-              // Layout matches Fonepay's own "Desktop Preview" guideline page:
-              // logo center-aligned above the QR, "Use your Mobile Banking or
-              // Wallets App to scan" heading, QR, red Check Status button,
-              // then the how-to-pay steps.
-              <div className="flex w-full flex-col items-center gap-3">
-                <FonepayLogo variant="lockup" height={28} />
-                <p className="text-sm font-medium text-foreground">
-                  Use your Mobile Banking or Wallets App to scan
-                </p>
-                {qrString && (
-                  <div className="rounded-lg border bg-white p-4">
-                    <QRCodeSVG value={qrString} size={220} />
-                  </div>
-                )}
-                <Button
-                  onClick={checkStatusManually}
-                  className="w-full gap-2"
-                  style={{ backgroundColor: "#ce2027", color: "#ffffff" }}
-                >
-                  <RefreshCw className="size-3.5" />
-                  Check Status
-                </Button>
-                <ol className="w-full list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
-                  <li>Open your mobile banking app or digital wallet.</li>
-                  <li>Log in, or simply tap the scan button (login not always required).</li>
-                  <li>Scan the QR code.</li>
-                  <li>Verify the payment details.</li>
-                  <li>Tap Confirm to complete your payment.</li>
-                </ol>
-              </div>
-            )}
+            {paymentView}
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="size-3.5 animate-spin" />
               Waiting for payment...
             </div>
 
-            {isMobile && showManualCheck && (
+            {notice && (
+              <p className="text-center text-xs text-muted-foreground">{notice}</p>
+            )}
+
+            {/* QRs are single-use: once one has been opened in a bank app and
+                abandoned, the bank app calls it expired. */}
+            <button
+              type="button"
+              onClick={refreshQr}
+              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              Payment expired or cancelled? Get a new QR
+            </button>
+
+            {/* The QR view has its own Check Status button; elsewhere on a
+                handheld it appears once the no-message grace period passes. */}
+            {isHandheld && method !== "qr" && showManualCheck && (
               <Button
+                type="button"
                 size="sm"
                 onClick={checkStatusManually}
                 className="gap-2"
@@ -267,7 +426,14 @@ export function FonepayCheckout({
               <Button variant="outline" onClick={() => handleOpenChange(false)}>
                 Close
               </Button>
-              <Button onClick={() => void start()}>Try again</Button>
+              <Button
+                onClick={() => {
+                  setMethod(null);
+                  void start({ fresh: true });
+                }}
+              >
+                Try again
+              </Button>
             </div>
           </div>
         )}

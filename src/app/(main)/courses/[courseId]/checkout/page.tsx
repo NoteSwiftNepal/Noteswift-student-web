@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, ChevronLeft } from "lucide-react";
@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RoutePlaceholder } from "@/components/route-placeholder";
 import { FonepayCheckout } from "@/components/checkout/FonepayCheckout";
 import { FonepayLogo } from "@/components/checkout/FonepayLogo";
+import { clearFonepayAttempt, hasResumableFonepayAttempt } from "@/hooks/useFonepayCheckout";
 
 export default function CourseCheckoutPage() {
   const params = useParams<{ courseId: string }>();
@@ -35,6 +36,19 @@ export default function CourseCheckoutPage() {
 
   const [unlockCode, setUnlockCode] = useState("");
   const [fonepayOpen, setFonepayOpen] = useState(false);
+
+  // Returning from a bank app often reloads this page (mobile browsers drop
+  // backgrounded tabs) — reopen the dialog so the stored attempt gets
+  // verified instead of silently forgotten. If the student is already
+  // enrolled (e.g. the backend sweep enrolled them), the attempt is done.
+  useEffect(() => {
+    if (!userId) return;
+    if (isEnrolled) {
+      clearFonepayAttempt(userId, courseId);
+    } else if (hasResumableFonepayAttempt(userId, courseId)) {
+      setFonepayOpen(true);
+    }
+  }, [userId, courseId, isEnrolled]);
 
   const onGrantedAccess = () => {
     invalidateCourseAccess();

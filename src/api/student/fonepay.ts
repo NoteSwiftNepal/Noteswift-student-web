@@ -29,6 +29,9 @@ export interface InitiateFonepayResult {
   qrString: string;
   websocketId: string;
   bankList: FonepayBankListItem[];
+  // When the checkout should stop showing this QR and offer a new one (our
+  // own window, FONEPAY_QR_TTL_SECONDS on the backend; Fonepay gives none).
+  expiresAt?: string;
 }
 
 // Mirrors LegacyApiResponse's {success:true, data} shape for the happy
