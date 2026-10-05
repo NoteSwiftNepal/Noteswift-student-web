@@ -36,14 +36,20 @@ function RoomLayout({
     [
       { source: Track.Source.Camera, withPlaceholder: true },
       { source: Track.Source.ScreenShare, withPlaceholder: false },
+      // An OBS (WHIP ingress) video may be published without a camera/
+      // screen-share source tag — include it so it can be found below.
+      { source: Track.Source.Unknown, withPlaceholder: false },
     ],
     { onlySubscribed: false }
   ).filter((t) => !t.participant.isLocal);
 
-  // Screen share takes priority over the camera tile when the teacher is
-  // presenting — same precedence the previous GridLayout gave it implicitly
-  // via sort order.
+  // The teacher's OBS stream joins as its own participant "obs-<classId>".
+  // When it has real video (not a withPlaceholder stand-in), it's the
+  // teacher's chosen main view — it used to lose to the teacher's camera.
+  // Then screen share, then camera — same precedence the previous
+  // GridLayout gave those implicitly via sort order.
   const teacherTrack =
+    tracks.find((t) => t.participant.identity.startsWith("obs-") && !!t.publication?.track && t.publication.kind === Track.Kind.Video) ??
     tracks.find((t) => t.source === Track.Source.ScreenShare) ??
     tracks.find((t) => t.source === Track.Source.Camera);
 
