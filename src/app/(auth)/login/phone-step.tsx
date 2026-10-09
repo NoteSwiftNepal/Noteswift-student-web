@@ -3,6 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Loader2, Smartphone } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -56,13 +57,19 @@ export function PhoneStep({ onOtpSent }: { onOtpSent: (phoneNumber: string) => v
           name="phone_number"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Phone number</FormLabel>
+              <FormLabel className="flex items-center gap-1.5">
+                <Smartphone className="h-4 w-4" />
+                Phone number
+              </FormLabel>
               <FormControl>
                 <Input
+                  type="tel"
                   placeholder="98XXXXXXXX"
                   inputMode="numeric"
                   maxLength={10}
                   autoComplete="tel"
+                  autoFocus
+                  className="h-11"
                   {...field}
                 />
               </FormControl>
@@ -71,8 +78,9 @@ export function PhoneStep({ onOtpSent }: { onOtpSent: (phoneNumber: string) => v
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Sending..." : "Continue"}
+        <Button type="submit" className="h-12 w-full text-base font-semibold shadow-md" disabled={isLoading}>
+          {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+          {isLoading ? "Sending..." : "Send code"}
         </Button>
       </form>
     </Form>
