@@ -37,6 +37,8 @@ export interface Course {
   learningPoints?: string[];
   features?: string[];
   price?: number;
+  // Admin-set discount, 0 to under 100 (see backend services/pricingService.ts).
+  discountPercent?: number;
   courseOverview?: string;
   keyFeatures?: string[];
   syllabus?: {

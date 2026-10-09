@@ -56,10 +56,13 @@ export interface InitiateFonepayResponse {
   code?: string; // e.g. "FONEPAY_UNAVAILABLE"
 }
 
+// discountCode is re-validated by the backend, which recomputes the price
+// itself; the response's `pricing` is what's actually charged.
 export const initiateFonepayPayment = async (
-  courseId: string
+  courseId: string,
+  discountCode?: string
 ): Promise<InitiateFonepayResponse> => {
-  const res = await api.post("/learn/fonepay/initiate", { courseId });
+  const res = await api.post("/learn/fonepay/initiate", discountCode ? { courseId, discountCode } : { courseId });
   return res.data;
 };
 

@@ -1,4 +1,5 @@
 "use client";
+import { CoursePrice } from "@/components/courses/course-price";
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -264,7 +265,7 @@ export default function CourseDetailPage() {
         <Card>
           <CardContent className="space-y-4 p-5">
             <p className="text-2xl font-bold text-foreground">
-              {isFree ? "Free" : `Rs. ${course.price}`}
+              {isFree ? "Free" : <CoursePrice course={course} />}
             </p>
 
             {isEnrolled ? (
