@@ -1,17 +1,8 @@
 // Persistent per-browser identifier sent as the web platform's device-fingerprint
 // equivalent (blueprint §5.3) — web has no stable hardware-derived identity, so a
 // stored UUID is the honest equivalent of mobile's lib/deviceFingerprint.ts.
-//
-// ⚠️ TEMPORARY STAND-IN, NOT A FINISHED DESIGN: the backend has exactly one
-// `activeDeviceFingerprint` slot per student today — no separate web slot
-// exists yet (blueprint §5.3 calls out the required backend change: a
-// second `activeWebSessionId`/`activeWebFingerprint` field, gated by a
-// client-platform header). Until that lands, logging into this web app and
-// logging into the mobile app as the same student will silently evict
-// whichever session logged in first — this file is not the fix, it's just
-// what the web app sends into that single, currently-shared slot. Do not
-// remove this warning or the one in api/axios.ts without confirming the
-// backend change has actually shipped.
+// Paired with x-client-platform: web, the backend binds it to the student's
+// web session slot (one web + one mobile session at a time).
 const WEB_SESSION_ID_KEY = "noteswift_web_session_id";
 
 export function getWebSessionId(): string {

@@ -83,3 +83,21 @@ export const getCurrentStudent = async (): Promise<
   const res = await api.get("/auth/me");
   return res.data;
 };
+
+// ─── QR login (scan from the mobile app) ──────────────────────────────────
+
+export const createQrLogin = async (): Promise<
+  ApiResponse<{ code: string; expiresInMs: number }>
+> => {
+  const res = await api.post("/auth/qr/create");
+  return res.data;
+};
+
+export type QrLoginStatus =
+  | { status: "pending" | "expired" }
+  | { status: "approved"; user: Student; accessToken: string; refreshToken: string };
+
+export const getQrLoginStatus = async (code: string): Promise<ApiResponse<QrLoginStatus>> => {
+  const res = await api.get(`/auth/qr/${encodeURIComponent(code)}/status`);
+  return res.data;
+};

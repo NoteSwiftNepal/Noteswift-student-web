@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { PhoneStep } from "./phone-step";
 import { OtpStep } from "./otp-step";
 import { RegistrationStep } from "./registration-step";
+import { QrStep } from "./qr-step";
 
-type Step = "phone" | "otp" | "registration";
+type Step = "phone" | "qr" | "otp" | "registration";
 
 export default function LoginPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("phone");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [qrOpened, setQrOpened] = useState(false);
+  const goToDashboard = useCallback(() => router.replace("/dashboard"), [router]);
 
   return (
     <main className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-gradient-to-br from-primary/5 via-background to-primary/5 py-10">
@@ -32,15 +35,46 @@ export default function LoginPage() {
         <div className="mb-6 text-center">
           <h1 className="text-xl font-bold text-foreground sm:text-2xl">
             {step === "phone" && "Sign in to your account"}
+            {step === "qr" && "Scan to sign in"}
             {step === "otp" && "Verify your phone"}
             {step === "registration" && "Complete your profile"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {step === "phone" && "Enter your phone number to get a one-time code."}
+            {step === "qr" && "Use the NoteSwift app on your phone. No code needed."}
             {step === "otp" && "Enter the code we sent to your phone."}
             {step === "registration" && "Just a few more details."}
           </p>
         </div>
+
+        {(step === "phone" || step === "qr") && (
+          <div role="tablist" className="mb-6 grid grid-cols-2 rounded-xl bg-muted p-1 text-sm font-medium">
+            {(["phone", "qr"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                role="tab"
+                aria-selected={step === mode}
+                onClick={() => {
+                  setStep(mode);
+                  if (mode === "qr") setQrOpened(true);
+                }}
+                className={`rounded-lg py-2 transition-colors ${
+                  step === mode ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {mode === "phone" ? "Phone number" : "Scan QR"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Stays mounted once opened so tab switches don't mint new codes. */}
+        {qrOpened && (
+          <div hidden={step !== "qr"}>
+            <QrStep onLoggedIn={goToDashboard} />
+          </div>
+        )}
 
         {step === "phone" && (
           <PhoneStep
