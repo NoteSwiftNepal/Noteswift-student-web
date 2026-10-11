@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useCourses } from "@/hooks/queries/useCourses";
 import { useEnrollments, useInvalidateCourseAccess } from "@/hooks/queries/useEnrollments";
 import { useSelectedCourse } from "@/hooks/useSelectedCourse";
+import { useTrackCourseLead } from "@/hooks/useTrackCourseLead";
 import { redeemUnlockCode } from "@/api/student/learn";
 import { getCheckoutQuote, type PriceQuote } from "@/api/student/checkout";
 import { formatRs } from "@/lib/pricing";
@@ -25,6 +26,7 @@ import { clearFonepayAttempt, hasResumableFonepayAttempt } from "@/hooks/useFone
 export default function CourseCheckoutPage() {
   const params = useParams<{ courseId: string }>();
   const courseId = params.courseId;
+  useTrackCourseLead(courseId, "checkout");
   const router = useRouter();
   const userId = useAuthStore((s) => s.user?.id);
   const invalidateCourseAccess = useInvalidateCourseAccess(userId);
