@@ -6,6 +6,7 @@ import Image from "next/image";
 import { PhoneStep } from "./phone-step";
 import { OtpStep } from "./otp-step";
 import { RegistrationStep } from "./registration-step";
+import { postLoginPath } from "@/lib/loginRedirect";
 
 type Step = "phone" | "otp" | "registration";
 
@@ -48,7 +49,7 @@ export default function LoginPage() {
               if (outcome === "newUser") {
                 setStep("registration");
               } else {
-                router.replace("/dashboard");
+                router.replace(postLoginPath());
               }
             }}
           />
@@ -57,7 +58,7 @@ export default function LoginPage() {
         {step === "registration" && (
           <RegistrationStep
             phoneNumber={phoneNumber}
-            onRegistered={() => router.replace("/dashboard")}
+            onRegistered={() => router.replace(postLoginPath())}
           />
         )}
       </div>
