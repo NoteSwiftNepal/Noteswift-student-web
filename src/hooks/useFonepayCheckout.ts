@@ -187,10 +187,11 @@ function sleep(ms: number) {
 export function useFonepayCheckout(
   courseId: string,
   onEnrolled?: () => void,
-  opts?: { liveUpdates?: boolean }
+  opts?: { liveUpdates?: boolean; discountCode?: string }
 ) {
   const liveUpdatesRef = useRef(opts?.liveUpdates ?? true);
   liveUpdatesRef.current = opts?.liveUpdates ?? true;
+  const discountCode = opts?.discountCode;
   const userId = useAuthStore((s) => s.user?.id);
   const [stage, setStage] = useState<FonepayCheckoutStage>("idle");
   const [qrString, setQrString] = useState<string | null>(null);
@@ -403,7 +404,7 @@ export function useFonepayCheckout(
         setStage("initiating");
         let res;
         try {
-          res = await initiateFonepayPayment(courseId);
+          res = await initiateFonepayPayment(courseId, discountCode);
         } catch (err) {
           res = errorBody(err).data ?? { success: false };
         }
@@ -444,7 +445,7 @@ export function useFonepayCheckout(
         setShowManualCheck(true);
       }, NO_MESSAGE_GRACE_MS);
     },
-    [userId, courseId, closeSocket, clearGraceTimer, connectSocket, runVerify]
+    [userId, courseId, discountCode, closeSocket, clearGraceTimer, connectSocket, runVerify]
   );
 
   // Coming back from the bank app: the socket was likely suspended (or

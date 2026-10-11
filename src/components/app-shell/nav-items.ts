@@ -17,6 +17,7 @@ import {
   UserRound,
   Users,
   LifeBuoy,
+  Receipt,
 } from "lucide-react";
 
 export type NavItem = {
@@ -40,6 +41,7 @@ export const moreNavItems: NavItem[] = [
   { label: "Progress", href: "/progress", icon: TrendingUp },
   { label: "Downloads", href: "/downloads", icon: Download },
   { label: "History", href: "/history", icon: History },
+  { label: "Payments", href: "/payments", icon: Receipt },
   { label: "Bookmarks", href: "/bookmarks", icon: Bookmark },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Settings", href: "/settings", icon: Settings },

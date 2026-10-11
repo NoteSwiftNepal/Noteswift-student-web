@@ -1,3 +1,4 @@
+import { CoursePrice } from "@/components/courses/course-price";
 import Link from "next/link";
 import { BookOpen, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,7 +75,7 @@ export function CourseCard({
                   course.price ? "text-foreground" : "text-green-700"
                 )}
               >
-                {course.price ? `Rs. ${course.price}` : "Free"}
+                {course.price ? <CoursePrice course={course} /> : "Free"}
               </span>
             </div>
           )}

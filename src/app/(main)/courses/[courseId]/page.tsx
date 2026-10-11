@@ -1,4 +1,5 @@
 "use client";
+import { CoursePrice } from "@/components/courses/course-price";
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -8,6 +9,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useCourses } from "@/hooks/queries/useCourses";
 import { useEnrollments, useTrials, useInvalidateCourseAccess } from "@/hooks/queries/useEnrollments";
 import { useSelectedCourse } from "@/hooks/useSelectedCourse";
+import { useTrackCourseLead } from "@/hooks/useTrackCourseLead";
 import { enrollInCourse, startFreeTrial } from "@/api/student/courses";
 import { redeemUnlockCode } from "@/api/student/learn";
 import { resolveCourse, getCourseId, courseTypeBadgeClasses } from "@/lib/course";
@@ -29,6 +31,7 @@ import { RoutePlaceholder } from "@/components/route-placeholder";
 export default function CourseDetailPage() {
   const params = useParams<{ courseId: string }>();
   const courseId = params.courseId;
+  useTrackCourseLead(courseId, "view");
   const router = useRouter();
   const userId = useAuthStore((s) => s.user?.id);
   const invalidateCourseAccess = useInvalidateCourseAccess(userId);
@@ -264,7 +267,7 @@ export default function CourseDetailPage() {
         <Card>
           <CardContent className="space-y-4 p-5">
             <p className="text-2xl font-bold text-foreground">
-              {isFree ? "Free" : `Rs. ${course.price}`}
+              {isFree ? "Free" : <CoursePrice course={course} />}
             </p>
 
             {isEnrolled ? (

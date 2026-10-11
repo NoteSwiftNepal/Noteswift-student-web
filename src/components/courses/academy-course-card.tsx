@@ -1,3 +1,4 @@
+import { CoursePrice } from "@/components/courses/course-price";
 import Link from "next/link";
 import { Star, School, CheckCircle2 } from "lucide-react";
 import { getCourseId, courseProgramSurfaceClasses } from "@/lib/course";
@@ -76,7 +77,7 @@ export function AcademyCourseCard({ course, enrolled }: { course: Course; enroll
           {isFree ? (
             <StatusBadge tone="free">FREE</StatusBadge>
           ) : (
-            <span className="shrink-0 text-title text-foreground">Rs. {course.price}</span>
+            <CoursePrice course={course} className="shrink-0 text-title text-foreground" />
           )}
 
           <span
