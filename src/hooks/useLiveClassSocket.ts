@@ -90,10 +90,23 @@ export function useLiveClassSocket(
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5,
+      // Keep retrying while the class page is open. It used to give up
+      // after 5 attempts (~15-25s offline) and never come back, so a
+      // student offline when the class ended never rejoined chat and never
+      // heard 'class-ended' (2026-10-06). Each reconnect re-runs
+      // join-classroom, which answers an ended class with 'class-ended'.
+      reconnectionAttempts: Infinity,
       transports: ["websocket"],
     });
     socketRef.current = socket;
+
+    // Network back, or the tab visible again (browsers throttle background
+    // tabs): reconnect now instead of waiting for the next backoff tick.
+    const reconnectNow = () => {
+      if (document.visibilityState === "visible" && !socket.connected) socket.connect();
+    };
+    window.addEventListener("online", reconnectNow);
+    document.addEventListener("visibilitychange", reconnectNow);
     setConnectionState("connecting");
 
     // The reconnect-recovery sequence mobile's LiveClassOverlay.tsx and the
@@ -176,6 +189,8 @@ export function useLiveClassSocket(
     socket.on("class-ended", () => setClassEnded(true));
 
     return () => {
+      window.removeEventListener("online", reconnectNow);
+      document.removeEventListener("visibilitychange", reconnectNow);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       socket.emit("leave-classroom", { classroomId });
       socket.disconnect();
