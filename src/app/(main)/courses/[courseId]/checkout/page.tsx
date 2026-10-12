@@ -184,25 +184,28 @@ export default function CourseCheckoutPage() {
 
           <Card>
             <CardContent className="space-y-3 p-5">
-              <div className="flex items-center justify-between gap-3">
-                <button
+              {/* Either a promo code or the course discount, never both
+                  (the backend refuses the combination too). Equal halves;
+                  while one is in use the other is disabled. */}
+              <div className={`grid gap-3 ${offeredDiscount > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
+                <Button
                   type="button"
+                  variant="outline"
+                  className={`h-11 justify-center gap-2 ${appliedCode ? "border-green-600/50 text-green-700" : "text-primary"}`}
+                  disabled={discountApplied}
                   onClick={() => setCodeOpen((v) => !v)}
-                  className="flex items-center gap-2 text-left"
                   aria-expanded={codeOpen || !!appliedCode}
                 >
-                  <span className="flex items-center gap-2 text-sm font-semibold text-primary">
-                    <TicketPercent className="size-4" />
-                    Use promo code
-                  </span>
-                  <ChevronDown className={`size-4 text-muted-foreground transition-transform ${codeOpen || appliedCode ? "rotate-180" : ""}`} />
-                </button>
+                  {appliedCode ? <Check className="size-4" /> : <TicketPercent className="size-4" />}
+                  {appliedCode ? "Promo code applied" : "Use promo code"}
+                  {!appliedCode && <ChevronDown className={`size-4 transition-transform ${codeOpen ? "rotate-180" : ""}`} />}
+                </Button>
                 {offeredDiscount > 0 && (
                   <Button
                     type="button"
-                    size="sm"
-                    variant={discountApplied ? "secondary" : "outline"}
-                    className={`gap-1.5 ${discountApplied ? "text-green-700" : ""}`}
+                    variant="outline"
+                    className={`h-11 justify-center gap-2 ${discountApplied ? "border-green-600/50 text-green-700" : "text-primary"}`}
+                    disabled={!!appliedCode}
                     onClick={() => setDiscountOpen(true)}
                   >
                     {discountApplied ? <Check className="size-4" /> : <BadgePercent className="size-4" />}
@@ -210,6 +213,12 @@ export default function CourseCheckoutPage() {
                   </Button>
                 )}
               </div>
+              {offeredDiscount > 0 && (appliedCode || discountApplied) && (
+                <p className="text-xs text-muted-foreground">
+                  You can use either a promo code or the course discount, not both.{" "}
+                  {appliedCode ? "Remove the promo code to apply the discount." : "Remove the discount to use a promo code."}
+                </p>
+              )}
 
               {appliedCode && quote?.discountCode ? (
                 <div className="flex items-center gap-3 rounded-lg border border-dashed border-green-600/50 bg-green-50 p-3 dark:bg-green-950/30">
@@ -241,7 +250,7 @@ export default function CourseCheckoutPage() {
                   </Button>
                 </div>
               ) : (
-                codeOpen && (
+                codeOpen && !discountApplied && (
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -357,18 +366,25 @@ export default function CourseCheckoutPage() {
           it in the order summary and the price. */}
       <Dialog open={discountOpen} onOpenChange={setDiscountOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+          <DialogHeader className="border-b pb-4">
             <DialogTitle className="flex items-center gap-2">
               <BadgePercent className="size-5 text-green-700" />
               {offeredDiscount}% off this course
             </DialogTitle>
-            <DialogDescription>{discountReason || "A special discount on this course."}</DialogDescription>
+            <DialogDescription className="sr-only">Why this discount is given, and how much you save.</DialogDescription>
           </DialogHeader>
-          {offeredSaving > 0 && (
-            <p className="text-sm text-foreground">
-              You save <span className="font-semibold text-green-700">{formatRs(offeredSaving)}</span> on {formatRs(listPrice)}.
-            </p>
-          )}
+          {/* Saving on the left, the reason on the right. */}
+          <div className="flex items-stretch gap-4">
+            <div className="flex w-32 shrink-0 flex-col items-center justify-center rounded-xl border border-green-600/30 bg-green-50 px-3 py-4 text-center dark:bg-green-950/30">
+              <span className="text-xl font-bold leading-tight text-green-700">{formatRs(offeredSaving)}</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-green-700">off</span>
+              <span className="mt-1 text-[11px] text-muted-foreground line-through">{formatRs(listPrice)}</span>
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col justify-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Why this discount</p>
+              <p className="mt-1 text-sm leading-relaxed text-foreground">{discountReason || "A special discount on this course."}</p>
+            </div>
+          </div>
           <DialogFooter className="gap-2 sm:gap-0">
             {discountApplied && (
               <Button
