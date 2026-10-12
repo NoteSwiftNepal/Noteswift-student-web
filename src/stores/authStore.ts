@@ -20,6 +20,7 @@ interface AuthState {
   apiMessage: string;
 
   setAccessToken: (token: string) => void;
+  setSession: (session: { user: Student; accessToken: string; refreshToken: string }) => void;
   sendPhoneOtp: (phoneNumber: string) => Promise<boolean>;
   verifyPhoneOtp: (
     phoneNumber: string,
@@ -46,6 +47,9 @@ export const useAuthStore = create<AuthState>()(
       apiMessage: "",
 
       setAccessToken: (token) => set({ accessToken: token }),
+
+      setSession: ({ user, accessToken, refreshToken }) =>
+        set({ user, accessToken, refreshToken, isLoggedIn: true, apiMessage: "Login successful" }),
 
       sendPhoneOtp: async (phoneNumber) => {
         set({ isLoading: true, apiMessage: "" });
@@ -162,6 +166,7 @@ export const useAuthStore = create<AuthState>()(
                 headers: {
                   Authorization: `Bearer ${currentToken}`,
                   "x-device-fingerprint": getWebSessionId(),
+                  "x-client-platform": "web",
                 },
               }
             );

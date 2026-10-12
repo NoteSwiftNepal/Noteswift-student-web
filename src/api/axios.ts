@@ -30,12 +30,11 @@ api.interceptors.request.use((config) => {
     delete config.headers.Authorization;
   }
 
-  // Web platform's device-fingerprint equivalent (blueprint §5.3) — this is a
-  // stand-in until the backend adds a separate web session slot; today it
-  // will collide with the mobile app's single activeDeviceFingerprint slot.
-  // Acceptable for local development only, not production, until that
-  // backend change lands.
+  // Web's device-fingerprint equivalent (blueprint §5.3). x-client-platform
+  // puts this browser in the student's separate web session slot, so web and
+  // the mobile app no longer evict each other.
   config.headers["x-device-fingerprint"] = getWebSessionId();
+  config.headers["x-client-platform"] = "web";
 
   return config;
 });
