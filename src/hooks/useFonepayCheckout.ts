@@ -419,6 +419,15 @@ export function useFonepayCheckout(
           onEnrolled?.();
           return;
         }
+        // A new QR was refused because the previous one is still pending
+        // (Fonepay couldn't be asked about it): keep showing that QR with
+        // the server's explanation, not a "payment failed" screen.
+        if ((res as any).code === "FONEPAY_CHECK_FAILED" && prnRef.current) {
+          setStage("awaiting-payment");
+          setShowManualCheck(true);
+          setNotice(res.message || "Your previous payment for this course is still pending.");
+          return;
+        }
         if (!res.success || !res.data) {
           setErrorMessage(res.message || "Could not start payment. Please try again.");
           setStage("failed");
