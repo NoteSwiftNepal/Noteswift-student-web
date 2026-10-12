@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, ChevronDown, ChevronLeft, Loader2, RefreshCw, TicketPercent, X } from "lucide-react";
+import { BadgePercent, Check, CheckCircle2, ChevronDown, ChevronLeft, Loader2, RefreshCw, TicketPercent, X } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useCourses } from "@/hooks/queries/useCourses";
 import { useEnrollments, useInvalidateCourseAccess } from "@/hooks/queries/useEnrollments";
@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RoutePlaceholder } from "@/components/route-placeholder";
 import { FonepayCheckout } from "@/components/checkout/FonepayCheckout";
 import { FonepayLogo } from "@/components/checkout/FonepayLogo";
@@ -40,33 +41,44 @@ export default function CourseCheckoutPage() {
 
   // The breakdown shown here is the backend's quote; Fonepay initiate
   // recomputes it and charges the same total.
-  // Discount code: applied only once the backend accepts it (the quote with
+  // Promo code: applied only once the backend accepts it (the quote with
   // the code succeeds); Fonepay initiate re-validates it again server-side.
+  // Course discount (admin-set): NOT in the price until the student opens
+  // "Apply discount", reads why it's given and presses Apply (owner's
+  // decision, 2026-10-12); the backend only discounts with applyDiscount.
   const queryClient = useQueryClient();
+  const [discountApplied, setDiscountApplied] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
   const [appliedCode, setAppliedCode] = useState<string | undefined>(undefined);
   const [codeOpen, setCodeOpen] = useState(false);
   const [codeInput, setCodeInput] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
   const applyCodeMutation = useMutation({
-    mutationFn: (code: string) => getCheckoutQuote(courseId, code),
+    mutationFn: (code: string) => getCheckoutQuote(courseId, code, discountApplied),
     onSuccess: (data, code) => {
-      queryClient.setQueryData(["checkout-quote", courseId, code], data);
+      queryClient.setQueryData(["checkout-quote", courseId, code, discountApplied], data);
       setAppliedCode(code);
       setCodeError(null);
       setCodeInput("");
     },
     onError: (err: any) => {
-      setCodeError(err?.response?.data?.message || err?.message || "This code can't be applied.");
+      setCodeError(err?.response?.data?.message || err?.message || "This promo code can't be applied.");
     },
   });
 
   const quoteQuery = useQuery({
-    queryKey: ["checkout-quote", courseId, appliedCode],
-    queryFn: () => getCheckoutQuote(courseId, appliedCode),
+    queryKey: ["checkout-quote", courseId, appliedCode, discountApplied],
+    queryFn: () => getCheckoutQuote(courseId, appliedCode, discountApplied),
     enabled: !!courseId && !!course && !isEnrolled && (course?.price ?? 0) > 0,
     retry: 1,
   });
   const quote = quoteQuery.data?.quote;
+  // The course discount on offer (from the quote, else the course list).
+  const offeredDiscount = quote?.courseDiscountAvailablePercent ?? course?.discountPercent ?? 0;
+  const discountReason = quoteQuery.data?.course?.discountReason;
+  const listPrice = quote?.listPrice ?? course?.price ?? 0;
+  // Same rounding as the backend (whole rupees), for the popup's preview.
+  const offeredSaving = Math.round((listPrice * offeredDiscount) / 100);
 
   const [unlockCode, setUnlockCode] = useState("");
   const [fonepayOpen, setFonepayOpen] = useState(false);
@@ -172,18 +184,32 @@ export default function CourseCheckoutPage() {
 
           <Card>
             <CardContent className="space-y-3 p-5">
-              <button
-                type="button"
-                onClick={() => setCodeOpen((v) => !v)}
-                className="flex w-full items-center justify-between text-left"
-                aria-expanded={codeOpen || !!appliedCode}
-              >
-                <span className="flex items-center gap-2 text-sm font-semibold text-primary">
-                  <TicketPercent className="size-4" />
-                  Use discount code
-                </span>
-                <ChevronDown className={`size-4 text-muted-foreground transition-transform ${codeOpen || appliedCode ? "rotate-180" : ""}`} />
-              </button>
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCodeOpen((v) => !v)}
+                  className="flex items-center gap-2 text-left"
+                  aria-expanded={codeOpen || !!appliedCode}
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <TicketPercent className="size-4" />
+                    Use promo code
+                  </span>
+                  <ChevronDown className={`size-4 text-muted-foreground transition-transform ${codeOpen || appliedCode ? "rotate-180" : ""}`} />
+                </button>
+                {offeredDiscount > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={discountApplied ? "secondary" : "outline"}
+                    className={`gap-1.5 ${discountApplied ? "text-green-700" : ""}`}
+                    onClick={() => setDiscountOpen(true)}
+                  >
+                    {discountApplied ? <Check className="size-4" /> : <BadgePercent className="size-4" />}
+                    {discountApplied ? "Discount applied" : "Apply discount"}
+                  </Button>
+                )}
+              </div>
 
               {appliedCode && quote?.discountCode ? (
                 <div className="flex items-center gap-3 rounded-lg border border-dashed border-green-600/50 bg-green-50 p-3 dark:bg-green-950/30">
@@ -205,7 +231,7 @@ export default function CourseCheckoutPage() {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    aria-label="Remove discount code"
+                    aria-label="Remove promo code"
                     onClick={() => {
                       setAppliedCode(undefined);
                       setCodeError(null);
@@ -226,7 +252,7 @@ export default function CourseCheckoutPage() {
                   >
                     <div className="flex gap-2">
                       <Input
-                        placeholder="Enter discount code"
+                        placeholder="Enter promo code"
                         value={codeInput}
                         onChange={(e) => {
                           setCodeInput(e.target.value);
@@ -324,13 +350,64 @@ export default function CourseCheckoutPage() {
         courseTitle={quote ? `${course.title} · ${formatRs(quote.total)}` : course.title}
         onEnrolled={onGrantedAccess}
         discountCode={quote?.discountCode}
+        applyDiscount={discountApplied}
       />
+
+      {/* The course discount: why it's given, and Apply. Only after Apply is
+          it in the order summary and the price. */}
+      <Dialog open={discountOpen} onOpenChange={setDiscountOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BadgePercent className="size-5 text-green-700" />
+              {offeredDiscount}% off this course
+            </DialogTitle>
+            <DialogDescription>{discountReason || "A special discount on this course."}</DialogDescription>
+          </DialogHeader>
+          {offeredSaving > 0 && (
+            <p className="text-sm text-foreground">
+              You save <span className="font-semibold text-green-700">{formatRs(offeredSaving)}</span> on {formatRs(listPrice)}.
+            </p>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            {discountApplied && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setDiscountApplied(false);
+                  setDiscountOpen(false);
+                }}
+              >
+                Remove discount
+              </Button>
+            )}
+            <Button
+              type="button"
+              disabled={discountApplied}
+              className={discountApplied ? "bg-green-600 text-white hover:bg-green-600 disabled:opacity-100" : ""}
+              onClick={() => {
+                setDiscountApplied(true);
+                setTimeout(() => setDiscountOpen(false), 600);
+              }}
+            >
+              {discountApplied ? (
+                <>
+                  <Check className="mr-1.5 size-4" /> Applied
+                </>
+              ) : (
+                "Apply"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 // Breakdown in the order the backend computes it: list price, course
-// discount, (code discount), total; then the VAT split of that total.
+// discount (only once applied), (promo code), total; then the VAT split.
 // Prices are VAT-inclusive, so taxable + VAT = total.
 function OrderSummary({ title, quote }: { title: string; quote: PriceQuote }) {
   const money = (n: number) => `Rs. ${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -347,7 +424,7 @@ function OrderSummary({ title, quote }: { title: string; quote: PriceQuote }) {
       {quote.courseDiscountAmount > 0 &&
         row(`Discount (${quote.courseDiscountPercent}%)`, `− ${money(quote.courseDiscountAmount)}`, { accent: true })}
       {quote.codeDiscountAmount > 0 &&
-        row(`Code ${quote.discountCode ?? ""} (${quote.codeDiscountPercent}%)`, `− ${money(quote.codeDiscountAmount)}`, { accent: true })}
+        row(`Promo code ${quote.discountCode ?? ""} (${quote.codeDiscountPercent}%)`, `− ${money(quote.codeDiscountAmount)}`, { accent: true })}
       {quote.totalDiscount > 0 && row("Package after discount", money(quote.total))}
       <div className="border-t border-dashed border-border" />
       {row("Taxable amount", money(quote.taxableAmount), { muted: true })}

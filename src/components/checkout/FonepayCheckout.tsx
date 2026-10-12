@@ -130,8 +130,10 @@ interface FonepayCheckoutProps {
   courseId: string;
   courseTitle: string;
   onEnrolled?: () => void;
-  // Applied at checkout; the backend re-validates it and prices the QR.
+  // Promo code applied at checkout; the backend re-validates it and prices the QR.
   discountCode?: string;
+  // The student applied the course's own discount at checkout.
+  applyDiscount?: boolean;
 }
 
 /**
@@ -149,6 +151,7 @@ export function FonepayCheckout({
   courseTitle,
   onEnrolled,
   discountCode,
+  applyDiscount,
 }: FonepayCheckoutProps) {
   const isHandheld = useIsHandheld();
   // null = handheld user hasn't picked yet (shows the chooser).
@@ -168,7 +171,7 @@ export function FonepayCheckout({
     refreshQr,
     reset,
     socketLost,
-  } = useFonepayCheckout(courseId, onEnrolled, { liveUpdates: !isHandheld, discountCode });
+  } = useFonepayCheckout(courseId, onEnrolled, { liveUpdates: !isHandheld, discountCode, applyDiscount });
 
   const secondsLeft = useSecondsLeft(qrExpiresAt);
   // Past our display window, or dead on Fonepay's side after its socket

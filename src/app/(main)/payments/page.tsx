@@ -140,7 +140,7 @@ function PaymentBreakdown({ payment }: { payment: Payment }) {
     <div className="space-y-2 rounded-lg border p-3">
       {row("Subtotal", money(p.listPrice))}
       {p.courseDiscountAmount > 0 && row(`Discount (${p.courseDiscountPercent}%)`, `− ${money(p.courseDiscountAmount)}`, { accent: true })}
-      {p.codeDiscountAmount > 0 && row(`Code ${p.discountCode ?? ""} (${p.codeDiscountPercent}%)`, `− ${money(p.codeDiscountAmount)}`, { accent: true })}
+      {p.codeDiscountAmount > 0 && row(`Promo code ${p.discountCode ?? ""} (${p.codeDiscountPercent}%)`, `− ${money(p.codeDiscountAmount)}`, { accent: true })}
       {row("Taxable amount", money(p.taxableAmount), { muted: true })}
       {row(`VAT (${p.vatRate}%)`, money(p.vatAmount), { muted: true })}
       <div className="border-t border-border" />
