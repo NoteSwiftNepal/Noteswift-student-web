@@ -187,11 +187,12 @@ function sleep(ms: number) {
 export function useFonepayCheckout(
   courseId: string,
   onEnrolled?: () => void,
-  opts?: { liveUpdates?: boolean; discountCode?: string }
+  opts?: { liveUpdates?: boolean; discountCode?: string; applyDiscount?: boolean }
 ) {
   const liveUpdatesRef = useRef(opts?.liveUpdates ?? true);
   liveUpdatesRef.current = opts?.liveUpdates ?? true;
   const discountCode = opts?.discountCode;
+  const applyDiscount = !!opts?.applyDiscount;
   const userId = useAuthStore((s) => s.user?.id);
   const [stage, setStage] = useState<FonepayCheckoutStage>("idle");
   const [qrString, setQrString] = useState<string | null>(null);
@@ -406,7 +407,7 @@ export function useFonepayCheckout(
         try {
           // fresh = "QR expired? Generate new one" / "Try again": a new QR.
           // Otherwise the backend shows the same unpaid QR again.
-          res = await initiateFonepayPayment(courseId, discountCode, !!opts?.fresh);
+          res = await initiateFonepayPayment(courseId, discountCode, !!opts?.fresh, applyDiscount);
         } catch (err) {
           res = errorBody(err).data ?? { success: false };
         }
@@ -465,7 +466,7 @@ export function useFonepayCheckout(
         setShowManualCheck(true);
       }, NO_MESSAGE_GRACE_MS);
     },
-    [userId, courseId, discountCode, closeSocket, clearGraceTimer, connectSocket, runVerify, onEnrolled]
+    [userId, courseId, discountCode, applyDiscount, closeSocket, clearGraceTimer, connectSocket, runVerify, onEnrolled]
   );
 
   // Coming back from the bank app: the socket was likely suspended (or

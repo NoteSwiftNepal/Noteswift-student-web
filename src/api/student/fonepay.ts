@@ -71,11 +71,13 @@ export interface InitiateFonepayResponse {
 export const initiateFonepayPayment = async (
   courseId: string,
   discountCode?: string,
-  forceNew?: boolean
+  forceNew?: boolean,
+  applyDiscount?: boolean
 ): Promise<InitiateFonepayResponse> => {
   const res = await api.post("/learn/fonepay/initiate", {
     courseId,
     ...(discountCode ? { discountCode } : {}),
+    ...(applyDiscount ? { applyDiscount: true } : {}),
     ...(forceNew ? { forceNew: true } : {}),
   });
   return res.data;

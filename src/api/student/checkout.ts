@@ -18,18 +18,35 @@ export interface PriceQuote {
   pricesIncludeVat: true;
   taxableAmount: number;
   vatAmount: number;
+  // The course's own discount on offer, and whether the student applied it
+  // ("Apply discount"); courseDiscountPercent/Amount are 0 until applied.
+  courseDiscountAvailablePercent?: number;
+  courseDiscountApplied?: boolean;
 }
 
 export interface CheckoutQuoteResult {
-  course: { _id: string; title: string; thumbnail?: string; program?: string };
+  course: {
+    _id: string;
+    title: string;
+    thumbnail?: string;
+    program?: string;
+    discountPercent?: number;
+    discountReason?: string | null; // shown in the "Apply discount" popup
+  };
   quote: PriceQuote;
   alreadyEnrolled: boolean;
 }
 
-// With a code: an invalid one rejects with the backend's reason (e.g. "This
-// discount code has expired"), readable as error.response.data.message.
-export const getCheckoutQuote = async (courseId: string, code?: string): Promise<CheckoutQuoteResult> => {
-  const res = await api.post("/learn/checkout/quote", code ? { courseId, code } : { courseId });
+// code = a promo code: an invalid one rejects with the backend's reason
+// (e.g. "This promo code has expired"), readable as
+// error.response.data.message. applyDiscount: the student applied the
+// course's own discount (it isn't in the price otherwise).
+export const getCheckoutQuote = async (courseId: string, code?: string, applyDiscount?: boolean): Promise<CheckoutQuoteResult> => {
+  const res = await api.post("/learn/checkout/quote", {
+    courseId,
+    ...(code ? { code } : {}),
+    ...(applyDiscount ? { applyDiscount: true } : {}),
+  });
   if (!res.data?.success) throw new Error(res.data?.message || "Could not load the price");
   return res.data.data;
 };
