@@ -404,9 +404,20 @@ export function useFonepayCheckout(
         setStage("initiating");
         let res;
         try {
-          res = await initiateFonepayPayment(courseId, discountCode);
+          // fresh = "QR expired? Generate new one" / "Try again": a new QR.
+          // Otherwise the backend shows the same unpaid QR again.
+          res = await initiateFonepayPayment(courseId, discountCode, !!opts?.fresh);
         } catch (err) {
           res = errorBody(err).data ?? { success: false };
+        }
+        // An earlier QR for this course was already paid (or the student is
+        // enrolled already): no QR, they're in.
+        if ((res.success && res.data?.status === "enrolled") || (res as any).code === "ALREADY_ENROLLED") {
+          clearFonepayAttempt(userId, courseId);
+          setEnrollment(res.data?.enrollment ?? null);
+          setStage("success");
+          onEnrolled?.();
+          return;
         }
         if (!res.success || !res.data) {
           setErrorMessage(res.message || "Could not start payment. Please try again.");
@@ -445,7 +456,7 @@ export function useFonepayCheckout(
         setShowManualCheck(true);
       }, NO_MESSAGE_GRACE_MS);
     },
-    [userId, courseId, discountCode, closeSocket, clearGraceTimer, connectSocket, runVerify]
+    [userId, courseId, discountCode, closeSocket, clearGraceTimer, connectSocket, runVerify, onEnrolled]
   );
 
   // Coming back from the bank app: the socket was likely suspended (or

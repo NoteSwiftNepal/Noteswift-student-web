@@ -29,9 +29,15 @@ export interface InitiateFonepayResult {
   qrString: string;
   websocketId: string;
   bankList: FonepayBankListItem[];
-  // When the checkout should stop showing this QR and offer a new one (our
-  // own window, FONEPAY_QR_TTL_SECONDS on the backend; Fonepay gives none).
+  // No longer sent (Fonepay documents no QR lifetime); kept optional for
+  // older backends.
   expiresAt?: string;
+  // true when this is the same unpaid QR the student was shown before.
+  reused?: boolean;
+  // Set instead of a QR when an earlier QR for this course was already paid.
+  status?: "enrolled";
+  alreadyPaid?: boolean;
+  enrollment?: any;
 }
 
 // Mirrors LegacyApiResponse's {success:true, data} shape for the happy
@@ -58,11 +64,20 @@ export interface InitiateFonepayResponse {
 
 // discountCode is re-validated by the backend, which recomputes the price
 // itself; the response's `pricing` is what's actually charged.
+// The backend shows the same unpaid QR again; forceNew ("QR expired?
+// Generate new one") asks for a new one. Before either it checks whether an
+// earlier QR for this course was already paid, and then enrolls the student
+// and answers with data.status === "enrolled" instead of a QR.
 export const initiateFonepayPayment = async (
   courseId: string,
-  discountCode?: string
+  discountCode?: string,
+  forceNew?: boolean
 ): Promise<InitiateFonepayResponse> => {
-  const res = await api.post("/learn/fonepay/initiate", discountCode ? { courseId, discountCode } : { courseId });
+  const res = await api.post("/learn/fonepay/initiate", {
+    courseId,
+    ...(discountCode ? { discountCode } : {}),
+    ...(forceNew ? { forceNew: true } : {}),
+  });
   return res.data;
 };
 
