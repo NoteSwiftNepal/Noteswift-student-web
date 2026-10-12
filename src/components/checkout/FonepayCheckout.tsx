@@ -380,7 +380,7 @@ export function FonepayCheckout({
               onClick={refreshQr}
               className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
             >
-              Payment expired or cancelled? Get a new QR
+              QR expired? Generate new one
             </button>
 
             {/* The QR view has its own Check Status button; elsewhere on a
