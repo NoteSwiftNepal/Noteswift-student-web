@@ -22,9 +22,10 @@ export function UserAvatarLink() {
       {user?.profileImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={user.profileImage} alt={user.full_name} className="size-full object-cover" />
-      ) : user?.avatarEmoji ? (
-        <span className="text-lg">{user.avatarEmoji}</span>
       ) : (
+        // No photo uploaded: the first letter of the student's name.
+        // (avatarEmoji is a generated image URL on this backend, not an
+        // emoji, so it isn't shown as text.)
         initial
       )}
     </Link>
