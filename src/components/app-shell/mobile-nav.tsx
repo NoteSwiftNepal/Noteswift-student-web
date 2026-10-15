@@ -60,9 +60,8 @@ export function MobileNav() {
 
   return (
     <header className="flex items-center justify-between border-b border-border bg-background px-4 py-3 lg:hidden">
-      <Link href="/dashboard" className="flex items-center gap-2">
-        <Image src="/noteswift-logo.png" alt="NoteSwift" width={24} height={24} />
-        <span className="text-base font-bold">NoteSwift</span>
+      <Link href="/dashboard" className="flex items-center">
+        <Image src="/noteswift-wordmark.png" alt="NoteSwift" width={480} height={96} priority className="h-5 w-auto" />
       </Link>
 
       <div className="flex items-center gap-1">
