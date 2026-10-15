@@ -129,8 +129,11 @@ export function SidebarNav() {
       )}
     >
       <div className={cn("flex items-center gap-2 px-5 py-5", collapsed && "justify-center px-0")}>
-        <Image src="/noteswift-logo.png" alt="NoteSwift" width={28} height={28} className="shrink-0" />
-        {!collapsed && <span className="truncate text-h4 text-sidebar-foreground">NoteSwift</span>}
+        {collapsed ? (
+          <Image src="/noteswift-mark.png" alt="NoteSwift" width={146} height={96} className="h-7 w-auto shrink-0" />
+        ) : (
+          <Image src="/noteswift-wordmark.png" alt="NoteSwift" width={480} height={96} priority className="h-6 w-auto shrink-0" />
+        )}
       </div>
 
       <nav className={cn("flex-1 space-y-1 overflow-y-auto px-3", collapsed && "px-2")}>
