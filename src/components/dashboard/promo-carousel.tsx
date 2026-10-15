@@ -58,7 +58,7 @@ export function PromoCarousel() {
   // staying clearly subordinate to the rest of the page on large screens;
   // below that it's still full-width, unchanged from before.
   if (isLoading) {
-    return <Skeleton className="aspect-[1280/630] w-full max-w-[960px] rounded-xl" />;
+    return <Skeleton className="mx-auto aspect-[1280/630] w-full max-w-[960px] rounded-xl" />;
   }
 
   if (isError || banners.length === 0) {
@@ -67,7 +67,9 @@ export function PromoCarousel() {
 
   return (
     <div
-      className="relative w-full max-w-[960px]"
+      // mx-auto: centred in the page (it used to sit against the left edge
+      // on screens wider than 960px).
+      className="relative mx-auto w-full max-w-[960px]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >

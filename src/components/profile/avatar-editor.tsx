@@ -62,9 +62,8 @@ export function AvatarEditor() {
         {user?.profileImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={user.profileImage} alt={user.full_name} className="size-full object-cover" />
-        ) : user?.avatarEmoji ? (
-          <span className="text-4xl">{user.avatarEmoji}</span>
         ) : (
+          // No photo uploaded: the first letter of the student's name.
           initial
         )}
       </div>

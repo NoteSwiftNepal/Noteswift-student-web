@@ -14,6 +14,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { NotificationBell } from "@/components/notification-bell";
 import { UserAvatarLink } from "./user-avatar-link";
 import { primaryNavItems, moreNavItems, moreNavLabel, MoreIcon } from "./nav-items";
+import { CourseSwitcher } from "./course-switcher";
 
 function NavLink({
   href,
@@ -65,6 +66,7 @@ export function MobileNav() {
       </Link>
 
       <div className="flex items-center gap-1">
+        <CourseSwitcher compact />
         <NotificationBell />
         <UserAvatarLink />
         <Sheet open={open} onOpenChange={setOpen}>

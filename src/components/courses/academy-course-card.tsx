@@ -50,7 +50,7 @@ export function AcademyCourseCard({ course, enrolled }: { course: Course; enroll
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-5">
         <p className="mb-2 text-eyebrow text-warning-500">{course.program}</p>
 
         <h3 className="mb-2 line-clamp-2 text-title text-foreground">{course.title}</h3>
@@ -82,7 +82,7 @@ export function AcademyCourseCard({ course, enrolled }: { course: Course; enroll
 
           <span
             className={cn(
-              "flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-sm px-4 py-2.5 text-body-sm font-semibold",
+              "flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-sm px-5 py-2.5 text-body-sm font-semibold",
               enrolled ? "bg-success-100 text-success-700" : "bg-foreground text-background"
             )}
           >

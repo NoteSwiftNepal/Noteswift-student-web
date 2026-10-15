@@ -5,6 +5,7 @@ import { SidebarNav } from "./sidebar-nav";
 import { MobileNav } from "./mobile-nav";
 import { NotificationBell } from "@/components/notification-bell";
 import { UserAvatarLink } from "./user-avatar-link";
+import { CourseSwitcher } from "./course-switcher";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <MobileNav />
         <div className="hidden items-center justify-end gap-2 border-b border-border px-8 py-3 lg:flex">
+          <CourseSwitcher />
           <NotificationBell />
           <UserAvatarLink />
         </div>
